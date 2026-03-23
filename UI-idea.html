@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChoosePath</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script>if(typeof console.debug!=='function')console.debug=()=>{};</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+:root{
+  /* surfaces */
+  --bg:       #f0f4ff;
+  --s0:       rgba(255,255,255,0.92);
+  --s1:       rgba(255,255,255,0.75);
+  --s2:       rgba(255,255,255,0.55);
+  --s3:       rgba(255,255,255,0.35);
+  --border:   rgba(180,190,220,0.35);
+  --border2:  rgba(120,140,200,0.55);
+
+  /* ink */
+  --ink:      #18203a;
+  --ink2:     #384060;
+  --ink3:     #6070a0;
+  --ink4:     #9aa0c0;
+  --ink5:     #c8cce0;
+
+  /* accents */
+  --blue:     #4a7cf7;
+  --blue2:    #2556e0;
+  --blue-s:   rgba(74,124,247,0.12);
+  --blue-g:   rgba(74,124,247,0.28);
+  --teal:     #0eb8a0;
+  --teal-s:   rgba(14,184,160,0.12);
+  --rose:     #f0567a;
+  --rose-s:   rgba(240,86,122,0.12);
+  --amber:    #f59e0b;
+  --amber-s:  rgba(245,158,11,0.12);
+  --violet:   #8b5cf6;
+  --violet-s: rgba(139,92,246,0.12);
+  --green:    #10b981;
+  --green-s:  rgba(16,185,129,0.12);
+
+  /* shadows */
+  --sh-sm:  0 2px 8px rgba(60,80,160,0.08), 0 1px 3px rgba(60,80,160,0.05);
+  --sh-md:  0 8px 24px rgba(60,80,160,0.12), 0 2px 8px rgba(60,80,160,0.06);
+  --sh-lg:  0 16px 48px rgba(60,80,160,0.14), 0 4px 12px rgba(60,80,160,0.07);
+  --sh-glow:0 0 0 3px rgba(74,124,247,0.2), 0 8px 24px rgba(74,124,247,0.18);
+
+  /* radii */
+  --r-sm:6px; --r-md:12px; --r-lg:18px; --r-xl:24px; --r-2xl:32px;
+
+  /* fonts */
+  --f-ui:  'Plus Jakarta Sans', sans-serif;
+  --f-mono:'JetBrains Mono', monospace;
+
+  /* motion */
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease-out:    cubic-bezier(.22,1,.36,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+
+body{
+  font-family:var(--f-ui);
+  background:var(--bg);
+  color:var(--ink);
+  display:flex;flex-direction:column;
+  position:relative;
+}
+
+/* ── aurora background ── */
+.aurora{
+  position:fixed;inset:-60%;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 25%, rgba(168,210,255,0.45) 0%,transparent 55%),
+    radial-gradient(ellipse 60% 70% at 85% 15%, rgba(200,168,255,0.35) 0%,transparent 55%),
+    radial-gradient(ellipse 80% 50% at 70% 80%, rgba(168,240,220,0.35) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 60% at 30% 75%, rgba(255,210,168,0.3)  0%,transparent 55%),
+    radial-gradient(ellipse 90% 90% at 50% 50%, rgba(240,244,255,1)    0%,transparent 70%);
+  animation:auroraShift 18s ease-in-out infinite alternate;
+}
+@keyframes auroraShift{
+  0%  {transform:translate(0,0) rotate(0deg)}
+  33% {transform:translate(3%,-2%) rotate(.8deg)}
+  66% {transform:translate(-2%,3%) rotate(-.8deg)}
+  100%{transform:translate(1.5%,-1.5%) rotate(.4deg)}
+}
+@media(prefers-reduced-motion:reduce){.aurora{animation:none}}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--ink5);border-radius:2px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:var(--r-sm)}
+
+/* ════════════════════════════ HEADER */
+header{
+  height:52px;flex-shrink:0;z-index:60;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;
+  background:var(--s0);
+  backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--border2);
+  box-shadow:var(--sh-sm);
+  position:relative;
+}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-orb{
+  width:32px;height:32px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--violet));
+  display:grid;place-items:center;
+  box-shadow:0 4px 12px rgba(74,124,247,.35);
+}
+.logo-name{
+  font-size:1.05rem;font-weight:700;letter-spacing:-.02em;color:var(--ink);
+}
+.logo-name span{
+  background:linear-gradient(90deg,var(--blue),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hdr-tabs{display:flex;gap:2px;background:var(--s2);border-radius:var(--r-md);padding:3px;backdrop-filter:blur(8px)}
+.htab{
+  font-family:var(--f-mono);font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);padding:4px 14px;border:none;background:transparent;
+  cursor:pointer;border-radius:8px;font-weight:500;
+  transition:color .15s,background .15s,box-shadow .15s;
+}
+.htab:hover{color:var(--ink);background:rgba(255,255,255,.5)}
+.htab.on{color:var(--blue);background:var(--s0);box-shadow:var(--sh-sm)}
+.hdr-r{display:flex;gap:8px}
+.hbtn{
+  font-family:var(--f-mono);font-size:.6rem;letter-spacing:.05em;text-transform:uppercase;
+  padding:5px 14px;border:1px solid var(--border2);border-radius:var(--r-sm);
+  background:transparent;color:var(--ink3);cursor:pointer;font-weight:500;
+  transition:all .15s;
+}
+.hbtn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-s)}
+.hbtn.primary{
+  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  color:#fff;border-color:transparent;
+  box-shadow:0 4px 12px rgba(74,124,247,.3);
+}
+.hbtn.primary:hover{box-shadow:0 6px 20px rgba(74,124,247,.4);transform:translateY(-1px)}
+
+/* ════════════════════════════ SHELL */
+.shell{
+  flex:1;display:grid;
+  grid-template-columns:200px 1fr 284px;
+  overflow:hidden;position:relative;z-index:1;
+}
+
+/* ════════════════════════════ SIDEBAR */
+.sb{
+  background:var(--s1);backdrop-filter:blur(16px);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sb-hd{
+  padding:12px 14px 10px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sb-lbl{font-family:var(--f-mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:500}
+.sb-badge{
+  font-family:var(--f-mono);font-size:.58rem;
+  background:var(--blue-s);color:var(--blue);
+  padding:2px 8px;border-radius:var(--r-2xl);border:1px solid rgba(74,124,247,.2);
+}
+.sb-list{flex:1;overflow-y:auto;padding:6px}
+.sb-row{
+  padding:8px 10px;cursor:pointer;border-radius:var(--r-md);
+  border:1px solid transparent;margin-bottom:2px;
+  transition:background .12s,border-color .15s,transform .18s var(--ease-spring);
+}
+.sb-row:hover{background:rgba(255,255,255,.6);transform:translateX(2px)}
+.sb-row.on{background:var(--s0);border-color:rgba(74,124,247,.25);box-shadow:var(--sh-sm)}
+.sb-row-t{font-size:.82rem;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.sb-row.on .sb-row-t{color:var(--blue)}
+.sb-row-m{display:flex;align-items:center;gap:5px}
+.sb-row-m span{font-family:var(--f-mono);font-size:.55rem;color:var(--ink4)}
+.gdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.sb-sec{padding:10px 10px 3px;font-family:var(--f-mono);font-size:.52rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink5)}
+
+/* memory log */
+.mem-log{
+  border-top:1px solid var(--border);flex-shrink:0;
+  max-height:148px;overflow-y:auto;padding:8px;
+  background:rgba(255,255,255,.3);
+}
+.mem-log-hd{
+  font-family:var(--f-mono);font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink4);margin-bottom:5px;display:flex;align-items:center;gap:5px;
+}
+.mem-log-hd::before{content:'◆';color:var(--blue);font-size:.4rem}
+.mem-entry{display:flex;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)}
+.mem-entry:last-child{border:none}
+.mem-who{font-family:var(--f-mono);font-size:.53rem;color:var(--blue);flex-shrink:0;padding-top:1px;font-weight:500}
+.mem-txt{font-size:.74rem;color:var(--ink4);line-height:1.35}
+
+.sb-foot{padding:8px;border-top:1px solid var(--border);display:flex;gap:6px}
+.sb-btn{
+  flex:1;padding:6px 0;font-family:var(--f-mono);font-size:.56rem;letter-spacing:.05em;
+  text-transform:uppercase;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:rgba(255,255,255,.5);color:var(--ink3);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:4px;font-weight:500;
+  transition:all .15s;
+}
+.sb-btn:hover{border-color:var(--border2);color:var(--ink);background:var(--s0)}
+.sb-btn.b{border-color:rgba(74,124,247,.3);color:var(--blue);background:var(--blue-s)}
+
+/* ════════════════════════════ CENTER: TREE */
+.center{
+  display:flex;flex-direction:column;overflow:hidden;
+  background:transparent;position:relative;
+}
+.tree-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 14px;
+  background:var(--s1);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);flex-shrink:0;gap:10px;
+}
+.bc{display:flex;align-items:center;gap:5px}
+.bci{font-family:var(--f-mono);font-size:.58rem;color:var(--ink4)}
+.bcsep{color:var(--ink5);margin:0 1px}
+.bci.cur{color:var(--blue);font-weight:500}
+.tstats{display:flex;gap:16px;flex-shrink:0}
+.tst{text-align:center}
+.tst-v{font-family:var(--f-mono);font-size:.82rem;font-weight:500;color:var(--ink);display:block}
+.tst-l{font-family:var(--f-mono);font-size:.48rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4)}
+.zbtns{display:flex;gap:3px}
+.zb{
+  width:26px;height:26px;border:1px solid var(--border);border-radius:var(--r-sm);
+  background:var(--s0);color:var(--ink3);cursor:pointer;display:grid;place-items:center;
+  font-family:var(--f-mono);font-size:.85rem;font-weight:500;
+  transition:all .15s;box-shadow:var(--sh-sm);
+}
+.zb:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-s)}
+
+.tree-canvas{flex:1;overflow:hidden;position:relative;cursor:grab}
+.tree-canvas:active{cursor:grabbing}
+#treeSvg{width:100%;height:100%;overflow:visible;display:block}
+
+/* SVG animations */
+@keyframes nodeIn{
+  0%  {opacity:0;transform:scale(.05)}
+  65% {opacity:1;transform:scale(1.07)}
+  100%{transform:scale(1)}
+}
+@keyframes wireIn{
+  from{stroke-dashoffset:500;opacity:0}
+  5%  {opacity:1}
+  to  {stroke-dashoffset:0}
+}
+@keyframes ringFloat{
+  0%,100%{stroke-opacity:.35;stroke-width:1.2}
+  50%    {stroke-opacity:.9;stroke-width:2.2}
+}
+
+/* ════════════════════════════ RIGHT PANEL */
+.rp{
+  background:var(--s1);backdrop-filter:blur(16px);
+  border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.rp-hd{
+  padding:10px 14px 8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.rp-lbl{font-family:var(--f-mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:500}
+.dprow{display:flex;align-items:center;gap:3px}
+.dp{
+  height:3px;width:8px;border-radius:99px;
+  background:var(--ink5);transition:all .25s var(--ease-spring);
+}
+.dp.done{background:var(--ink4)}
+.dp.here{background:var(--blue);width:18px;box-shadow:0 0 8px var(--blue-g)}
+
+/* narrative */
+.narr-scroll{flex:1;overflow-y:auto;padding:14px}
+.nloc{
+  font-family:var(--f-mono);font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink4);margin-bottom:10px;display:flex;align-items:center;gap:7px;
+}
+.nloc::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.nscene{
+  font-size:.97rem;line-height:1.82;color:var(--ink2);
+  font-weight:400;margin-bottom:14px;letter-spacing:.005em;
+}
+.nscene em{font-style:normal;font-weight:600;color:var(--ink)}
+
+/* event cards */
+.ev-list{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.ev-card{
+  border-radius:var(--r-md);padding:8px 10px 8px 12px;
+  display:flex;gap:8px;align-items:flex-start;
+  border:1px solid;position:relative;overflow:hidden;
+}
+.ev-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:99px 0 0 99px;
+}
+.ev-card.enemy  {background:rgba(240,86,122,.07); border-color:rgba(240,86,122,.2)}
+.ev-card.event  {background:rgba(74,124,247,.07);  border-color:rgba(74,124,247,.2)}
+.ev-card.warning{background:rgba(245,158,11,.07);  border-color:rgba(245,158,11,.2)}
+.ev-card.mystery{background:rgba(139,92,246,.07);  border-color:rgba(139,92,246,.2)}
+.ev-card.memory {background:rgba(16,185,129,.07);  border-color:rgba(16,185,129,.2)}
+.ev-card.enemy::before  {background:var(--rose)}
+.ev-card.event::before  {background:var(--blue)}
+.ev-card.warning::before{background:var(--amber)}
+.ev-card.mystery::before{background:var(--violet)}
+.ev-card.memory::before {background:var(--green)}
+.ev-ico{width:18px;height:18px;flex-shrink:0;display:grid;place-items:center;margin-top:1px}
+.ev-who{font-family:var(--f-mono);font-size:.56rem;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;font-weight:600}
+.ev-card.enemy .ev-who  {color:var(--rose)}
+.ev-card.event .ev-who  {color:var(--blue)}
+.ev-card.warning .ev-who{color:var(--amber)}
+.ev-card.mystery .ev-who{color:var(--violet)}
+.ev-card.memory .ev-who {color:var(--green)}
+.ev-txt{font-size:.8rem;color:var(--ink3);line-height:1.4}
+
+/* ════════════════════════════ MEMORY NOTIFICATION */
+#mem-notif{
+  position:fixed;right:16px;top:62px;z-index:999;
+  display:flex;flex-direction:column;gap:8px;
+  pointer-events:none;max-width:268px;
+}
+.mn{
+  background:var(--s0);backdrop-filter:blur(20px);
+  border:1px solid rgba(74,124,247,.3);border-radius:var(--r-xl);
+  padding:12px 14px;box-shadow:var(--sh-lg);
+  position:relative;overflow:hidden;
+}
+.mn::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--violet));
+}
+.mn-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.mn-icon{
+  width:26px;height:26px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue-s),var(--violet-s));
+  border:1px solid rgba(74,124,247,.2);display:grid;place-items:center;
+}
+.mn-who{font-family:var(--f-mono);font-size:.58rem;letter-spacing:.08em;color:var(--blue);text-transform:uppercase;font-weight:600}
+.mn-txt{font-size:.84rem;color:var(--ink2);line-height:1.4}
+.mn-tag{
+  font-family:var(--f-mono);font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--green);background:var(--green-s);
+  padding:2px 8px;margin-top:6px;display:inline-flex;align-items:center;gap:4px;
+  border-radius:var(--r-2xl);border:1px solid rgba(16,185,129,.2);
+}
+.mn-tag::before{content:'◆';font-size:.35rem}
+
+/* ════════════════════════════ CHOICES */
+.choices-wrap{
+  border-top:1px solid var(--border);padding:10px;
+  background:rgba(255,255,255,.35);flex-shrink:0;
+}
+.choices-hd{
+  font-family:var(--f-mono);font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink4);margin-bottom:8px;display:flex;align-items:center;gap:6px;font-weight:500;
+}
+.choices-hd .a{color:var(--blue)}
+.choices-hd::before{content:'';width:12px;height:1px;background:var(--ink5)}
+.choices-stack{display:flex;flex-direction:column;gap:4px}
+
+/* ════════════════════════════ CHOICE CARD */
+.cc{
+  background:var(--s0);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:9px 11px;cursor:grab;user-select:none;
+  display:flex;align-items:center;gap:9px;
+  box-shadow:var(--sh-sm);will-change:transform;
+  transition:border-color .15s,box-shadow .15s,transform .15s;
+  position:relative;overflow:hidden;
+}
+.cc::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(135deg,rgba(74,124,247,.06),transparent);
+  opacity:0;transition:opacity .15s;
+}
+.cc:hover{border-color:rgba(74,124,247,.4);box-shadow:0 4px 16px rgba(74,124,247,.15);transform:translateY(-1px)}
+.cc:hover::before{opacity:1}
+.cc:active{cursor:grabbing}
+.cck{
+  font-family:var(--f-mono);font-size:.6rem;font-weight:600;
+  width:20px;height:20px;border-radius:6px;
+  border:1.5px solid rgba(74,124,247,.3);
+  display:grid;place-items:center;flex-shrink:0;
+  background:var(--blue-s);color:var(--blue);
+}
+.cctxt{font-size:.9rem;font-weight:500;color:var(--ink2);flex:1;line-height:1.35;letter-spacing:.005em}
+.cc-mem{
+  font-family:var(--f-mono);font-size:.48rem;letter-spacing:.07em;
+  color:var(--green);background:var(--green-s);
+  padding:2px 6px;border-radius:var(--r-2xl);border:1px solid rgba(16,185,129,.2);
+  white-space:nowrap;flex-shrink:0;
+}
+.ccgrip{flex-shrink:0;opacity:.2;transition:opacity .15s}
+.cc:hover .ccgrip{opacity:.55}
+
+/* ════════════════════════════ DRAG GHOST */
+#ghost{
+  position:fixed;pointer-events:none;z-index:9000;
+  background:var(--s0);backdrop-filter:blur(16px);
+  border:1px solid var(--border2);border-radius:var(--r-lg);
+  padding:9px 14px;font-size:.9rem;font-weight:600;
+  color:var(--ink);box-shadow:var(--sh-lg);
+  max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:none;transform-origin:center center;
+}
+#ghost.snap{
+  background:linear-gradient(135deg,rgba(74,124,247,.15),rgba(139,92,246,.15));
+  border-color:rgba(74,124,247,.6);color:var(--blue);
+  box-shadow:var(--sh-glow);
+}
+
+/* ════════════════════════════ HINT */
+#hint{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;z-index:2;transition:opacity .4s;
+}
+#hint.gone{opacity:0}
+.hint-box{
+  background:var(--s0);backdrop-filter:blur(16px);
+  border:1px solid var(--border2);border-radius:var(--r-2xl);
+  padding:28px 36px;text-align:center;box-shadow:var(--sh-lg);
+}
+.hint-ico{
+  width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(135deg,var(--blue-s),var(--violet-s));
+  border:1px solid rgba(74,124,247,.25);
+  display:grid;place-items:center;margin:0 auto 14px;
+  box-shadow:0 4px 12px rgba(74,124,247,.15);
+}
+.hint-t{font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:5px;letter-spacing:-.01em}
+.hint-s{font-size:.86rem;color:var(--ink3)}
+
+/* ════════════════════════════ TOAST */
+#toast{
+  position:fixed;bottom:22px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:var(--s0);backdrop-filter:blur(16px);
+  border:1px solid var(--border2);border-radius:var(--r-2xl);
+  color:var(--blue);padding:8px 20px;
+  font-family:var(--f-mono);font-size:.62rem;letter-spacing:.07em;font-weight:500;
+  box-shadow:var(--sh-lg);opacity:0;pointer-events:none;z-index:9999;
+  transition:opacity .2s,transform .24s var(--ease-spring);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ════════════════════════════ ANIMS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.nscene,.ev-list,.choices-stack{animation:fadeUp .3s var(--ease-out) both}
+.choices-stack{animation-delay:.08s}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .aurora{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true"></div>
+
+<header>
+  <a href="#" class="logo" aria-label="ChoosePath">
+    <div class="logo-orb">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h4M17 12h4M7 12a5 5 0 0 1 10 0"/><circle cx="12" cy="7" r="2"/>
+        <circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
+        <path d="M8.5 15.5 10 13M15.5 15.5 14 13"/>
+      </svg>
+    </div>
+    <span class="logo-name">Choose<span>Path</span></span>
+  </a>
+
+  <div class="hdr-tabs" role="tablist">
+    <button class="htab" role="tab">Editor</button>
+    <button class="htab on" role="tab" aria-selected="true">Jugar</button>
+    <button class="htab" role="tab">Exportar</button>
+  </div>
+
+  <div class="hdr-r">
+    <button class="hbtn">Exportar</button>
+    <button class="hbtn primary">+ Nueva</button>
+  </div>
+</header>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sb" aria-label="Historias">
+  <div class="sb-hd">
+    <span class="sb-lbl">Historias</span>
+    <span class="sb-badge" id="memCount">0 mem</span>
+  </div>
+  <div class="sb-list" role="list">
+    <div class="sb-sec">Activas</div>
+    <div class="sb-row on" tabindex="0">
+      <div class="sb-row-t">El Galeón de la Niebla</div>
+      <div class="sb-row-m"><span class="gdot" style="background:var(--blue)"></span><span>Aventura · en curso</span></div>
+    </div>
+    <div class="sb-row" tabindex="0">
+      <div class="sb-row-t">La Cripta del Alquimista</div>
+      <div class="sb-row-m"><span class="gdot" style="background:var(--violet)"></span><span>Terror · 12 nodos</span></div>
+    </div>
+    <div class="sb-row" tabindex="0">
+      <div class="sb-row-t">Marte, Año 2187</div>
+      <div class="sb-row-m"><span class="gdot" style="background:var(--teal)"></span><span>Sci-fi · 5 nodos</span></div>
+    </div>
+    <div class="sb-sec">Completadas</div>
+    <div class="sb-row" tabindex="0">
+      <div class="sb-row-t">El Último Mensajero</div>
+      <div class="sb-row-m"><span class="gdot" style="background:var(--green)"></span><span>Fantasía · 18 nodos</span></div>
+    </div>
+  </div>
+  <div class="mem-log">
+    <div class="mem-log-hd">Memorias activas</div>
+    <div id="memLog"><span class="mem-txt" style="font-size:.7rem;color:var(--ink5)">Sin memorias aún.</span></div>
+  </div>
+  <div class="sb-foot">
+    <button class="sb-btn">↺ Reiniciar</button>
+    <button class="sb-btn b">⬇ Export</button>
+  </div>
+</aside>
+
+<!-- TREE CANVAS -->
+<div class="center">
+  <div class="tree-bar">
+    <div class="bc">
+      <span class="bci">El Galeón</span>
+      <span class="bcsep">›</span>
+      <span class="bci cur" id="bc2">Puerto</span>
+    </div>
+    <div class="tstats">
+      <div class="tst"><span class="tst-v" id="sN">1</span><span class="tst-l">Nodos</span></div>
+      <div class="tst"><span class="tst-v" id="sD">0</span><span class="tst-l">Prof.</span></div>
+      <div class="tst"><span class="tst-v" id="sB">0</span><span class="tst-l">Ramas</span></div>
+    </div>
+    <div class="zbtns">
+      <button class="zb" id="zIn">+</button>
+      <button class="zb" id="zOut">−</button>
+      <button class="zb" id="zFit" style="font-size:.46rem">fit</button>
+    </div>
+  </div>
+  <div class="tree-canvas" id="treeCanvas">
+    <svg id="treeSvg" viewBox="-200 -40 700 500">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M1 2L8 5L1 8" fill="none" stroke="rgba(120,140,200,.45)" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+        <marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M1 2L8 5L1 8" fill="none" stroke="#4a7cf7" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+        <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M1 2L8 5L1 8" fill="none" stroke="rgba(120,140,200,.2)" stroke-width="1.2" stroke-linecap="round"/>
+        </marker>
+        <filter id="glow-f">
+          <feGaussianBlur stdDeviation="4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g id="treeEdges"></g>
+      <g id="treeNodes"></g>
+    </svg>
+    <div id="hint" aria-live="polite">
+      <div class="hint-box">
+        <div class="hint-ico">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#grad1)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <defs><linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4a7cf7"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs>
+            <path d="M5 9l4 4 4-4M5 15l4 4 4-4M17 4v16"/>
+          </svg>
+        </div>
+        <div class="hint-t">Arrastra una decisión al árbol</div>
+        <div class="hint-s">Suéltala sobre el nodo activo para avanzar</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="rp">
+  <div class="rp-hd">
+    <span class="rp-lbl">Narrativa</span>
+    <div class="dprow" id="dprow"></div>
+  </div>
+  <div class="narr-scroll" id="narrScroll">
+    <div class="nloc" id="nloc">Puerto · Origen</div>
+    <p class="nscene" id="nscene"></p>
+    <div class="ev-list" id="evList"></div>
+  </div>
+  <div class="choices-wrap">
+    <div class="choices-hd">Decisiones — <span class="a">arrastra al árbol</span></div>
+    <div class="choices-stack" id="cstack"></div>
+  </div>
+</div>
+
+</div><!-- /shell -->
+
+<div id="mem-notif" aria-live="polite" aria-label="Nuevas memorias"></div>
+<div id="ghost" aria-hidden="true"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ══════════════════════════ MEMORY */
+const MEM={};
+function addMem(key,who,txt,nodeId){
+  if(MEM[key])return;
+  MEM[key]={who,txt,nodeId};
+  document.getElementById('memCount').textContent=Object.keys(MEM).length+' mem';
+  showMemNotif(who,txt);
+  renderMemLog();
+}
+function showMemNotif(who,txt){
+  const area=document.getElementById('mem-notif');
+  const c=document.createElement('div');
+  c.className='mn';
+  c.innerHTML=`<div class="mn-top"><div class="mn-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a7cf7" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div><div class="mn-who">${who}</div></div><div class="mn-txt">${txt}</div><div class="mn-tag">recordará esto</div>`;
+  area.appendChild(c);
+  gsap.fromTo(c,{x:110,opacity:0},{x:0,opacity:1,duration:.45,ease:'back.out(1.5)'});
+  setTimeout(()=>gsap.to(c,{x:110,opacity:0,duration:.35,ease:'power2.in',onComplete:()=>c.remove()}),4200);
+}
+function renderMemLog(){
+  const log=document.getElementById('memLog');if(!log)return;
+  const keys=Object.keys(MEM);
+  if(!keys.length){log.innerHTML='<span class="mem-txt" style="font-size:.7rem;color:var(--ink5)">Sin memorias aún.</span>';return;}
+  log.innerHTML=keys.slice(-8).reverse().map(k=>`<div class="mem-entry"><span class="mem-who">${MEM[k].who.split(' ')[0]}</span><span class="mem-txt">${MEM[k].txt}</span></div>`).join('');
+}
+function hasMem(text){
+  const h=text.toLowerCase();
+  return Object.keys(MEM).some(k=>MEM[k].who.toLowerCase().split(/\s+/).some(w=>w.length>3&&h.includes(w)));
+}
+
+/* ══════════════════════════ STORY DATA — historia completa de 3 ramas */
+const NODES={
+  root:{
+    id:'root',label:'Puerto',depth:0,
+    scene:`El alba tiñe Portum Velorum de color melocotón y sal. Los estibadores maldicen en tres idiomas mientras los galeones mecen sus cadenas. Junto al farol del muelle siete, una figura encapuchada te observa fijamente. Al fondo, el Capitán Drace supervisa la carga del <em>Viento Ciego</em> sin apartar la mano de su pistola. Aún no te ha visto.`,
+    events:[],memKeys:[],children:[],
+    choices:[
+      {k:'A',text:'Acercarte a la figura del muelle siete'},
+      {k:'B',text:'Abordar a Drace antes de que zarpe'},
+      {k:'C',text:'Colarte en la bodega del Viento Ciego'},
+    ]
+  }
+};
+
+const DB={
+  /* ── RAMA A: Mira y el sello */
+  'Acercarte a la figura del muelle siete':{
+    label:'Mira',
+    scene:`La figura aparta la capucha. Es Mira Solano —espía de la Corona que creías muerta en el naufragio de Tarsis hace dos años. Cicatriz fresca desde la ceja izquierda hasta el mentón. Te empuja hacia las sombras y habla deprisa: <em>"El Almirante Kael vende información a los rebeldes. Lleva este sello al Juez Harren de Isla Negra. Nadie más lo puede abrir."</em> Te pone en la palma un disco de lacre negro con un sello de cuervo. Desaparece antes de que puedas responder.`,
+    events:[
+      {type:'mystery',who:'Mira Solano',txt:'Viva. Dos años desaparecida. La cicatriz es de interrogatorio reciente.'},
+      {type:'event',who:'Sello de cuervo',txt:'Lacre negro. Solo el Juez Harren puede abrirlo legítimamente.'},
+    ],
+    memKeys:['mira_viva','kael_traidor'],
+    choices:[
+      {k:'A',text:'Buscar a Drace para cruzar a Isla Negra'},
+      {k:'B',text:'Romper el sello y leer el mensaje'},
+      {k:'C',text:'Seguir a Mira entre la niebla'},
+    ]
+  },
+  'Buscar a Drace para cruzar a Isla Negra':{
+    label:'Drace·A',
+    scene:`Drace te escucha con los ojos entornados. Lleva el nombre del Almirante Kael tatuado en el antebrazo —símbolo de viejo juramento de lealtad marina. Mira el bulto en tu bolsillo. <em>"Doce monedas de oro o el sello. Elige."</em> Alguien del puerto ya le dijo que ibas a venir.`,
+    events:[
+      {type:'enemy',who:'Capitán Drace',txt:'Conoce el sello antes de que hablaras. Fue avisado.'},
+      {type:'warning',who:'Tatuaje de Kael',txt:'Drace lleva el nombre del Almirante. Lealtad antigua, quizás activa.'},
+    ],
+    memKeys:['drace_informado','drace_kael'],
+    choices:[
+      {k:'A',text:'Pagar las doce monedas y conservar el sello'},
+      {k:'B',text:'Negarte: buscar otro barco'},
+      {k:'C',text:'Acusar a Drace de espionaje en voz alta'},
+    ]
+  },
+  'Pagar las doce monedas y conservar el sello':{
+    label:'En Mar',
+    scene:`El Viento Ciego zarpa al mediodía. Esa noche, en alta mar, Drace baja a tu camarote. Cierra la puerta. <em>"Voy a ser directo contigo. El Almirante Kael me paga para saber quién lleva mensajes a Harren. Puedo olvidar que existes por veinte monedas más, o puedo recordarlo perfectamente."</em> Una pausa. <em>"Tú decides."</em>`,
+    events:[
+      {type:'enemy',who:'Capitán Drace',txt:'Confirmado: trabaja para Kael. El pasaje fue una trampa.'},
+      {type:'warning',who:'Alta mar',txt:'Sin escapatoria. Isla Negra aún a doce horas.'},
+    ],
+    memKeys:['drace_agente_kael','trampa_barco'],
+    choices:[
+      {k:'A',text:'Pagar las veinte monedas adicionales'},
+      {k:'B',text:'Atacar a Drace y tomar el control'},
+      {k:'C',text:'Revelar el contenido del sello para negociar'},
+    ]
+  },
+  'Romper el sello y leer el mensaje':{
+    label:'El Mensaje',
+    scene:`El lacre cede. Tres nombres escritos con tinta roja. Una fecha: <em>mañana al amanecer.</em> Almirante Kael. Juez Harren. Y el tuyo. No eres el mensajero. Eres el tercero en la lista de eliminación. Mira fue engañada para entregarte el pergamino —o tú fuiste engañado para recibirlo.`,
+    events:[
+      {type:'warning',who:'Lista roja',txt:'Tu nombre en la lista junto a Kael y Harren. Objetivo, no enviado.'},
+      {type:'mystery',who:'Autor desconocido',txt:'Quien escribió esto conocía tu identidad. Planificó con días de antelación.'},
+    ],
+    memKeys:['eres_objetivo','sello_roto'],
+    choices:[
+      {k:'A',text:'Correr a advertir a Mira del engaño'},
+      {k:'B',text:'Destruir el pergamino y huir del puerto'},
+      {k:'C',text:'Ir directamente al Almirante Kael'},
+    ]
+  },
+  'Seguir a Mira entre la niebla':{
+    label:'Trampa',
+    scene:`La sigues tres minutos entre callejones de carga. Cuando la niebla se espesa junto a los almacenes de popa, Mira se detiene. No está sola: dos guardias con uniformes de la armada real la flanquean. Se gira hacia ti muy despacio: <em>"Lo siento. No tuve alternativa."</em>`,
+    events:[
+      {type:'enemy',who:'Guardia Izquierda',txt:'Bloquea la salida al embarcadero. Espada a medias.'},
+      {type:'enemy',who:'Guardia Derecha',txt:'Cierra el callejón. Grilletes en el cinto.'},
+      {type:'warning',who:'Mira Solano',txt:'Señuelo. El sello que entregó es falso, de cera pintada.'},
+    ],
+    memKeys:['mira_seneuelo','sello_falso','trampa_armada'],
+    choices:[
+      {k:'A',text:'Luchar para abrirte paso al muelle'},
+      {k:'B',text:'Lanzar el sello al mar y rendirte'},
+      {k:'C',text:'Exigir hablar con el oficial superior'},
+    ]
+  },
+
+  /* ── RAMA B: Drace y la alianza */
+  'Abordar a Drace antes de que zarpe':{
+    label:'Cubierta',
+    scene:`Subes la pasarela sin que nadie te detenga. Drace lo observa y sonríe de lado. <em>"Tienes agallas, eso sí."</em> La cubierta del Viento Ciego huele a pólvora nueva. Dos marineros con traza de mercenarios vigilan la escotilla de popa. Drace te tiende un vaso de aguardiente sin preguntar nada. Solo espera.`,
+    events:[
+      {type:'event',who:'Capitán Drace',txt:'Respeta la audacia. Espera en silencio. Trato posible.'},
+      {type:'warning',who:'Mercenarios en escotilla',txt:'No son marineros normales. Están armados y nerviosos.'},
+    ],
+    memKeys:['drace_respeto','mercenarios_bordo'],
+    choices:[
+      {k:'A',text:'Pedirle pasaje discreto a Isla Negra'},
+      {k:'B',text:'Preguntarle sobre el Almirante Kael'},
+      {k:'C',text:'Ofrecerte como tripulante hasta Isla Negra'},
+    ]
+  },
+  'Preguntarle sobre el Almirante Kael':{
+    label:'El Nombre',
+    scene:`El vaso se detiene a mitad de camino. Los dos mercenarios de la escotilla intercambian una mirada rápida. Drace baja la voz: <em>"Kael cerró mis rutas del norte hace siete meses. Decomisó dos barcos. Arruinó a mi familia."</em> Pausa. <em>"Pero hay gente que paga bien por saber dónde está y cuándo mueve sus fichas. ¿Tú eres uno de esos?"</em>`,
+    events:[
+      {type:'event',who:'Capitán Drace',txt:'Arruinado por Kael. Motivos propios para traicionarlo.'},
+      {type:'mystery',who:'Información de Kael',txt:'Drace tiene datos de movimientos. Fuente potencialmente valiosa.'},
+    ],
+    memKeys:['drace_vs_kael','drace_intel'],
+    choices:[
+      {k:'A',text:'Confirmar que buscas a Kael y proponer alianza'},
+      {k:'B',text:'Negar cualquier relación con Kael'},
+      {k:'C',text:'Ofrecerle oro por su información ahora mismo'},
+    ]
+  },
+  'Confirmar que buscas a Kael y proponer alianza':{
+    label:'Alianza',
+    scene:`Drace estrecha la mano con la firmeza de quien firma en sangre. Baja a su cabina de mapas. Sobre la mesa, una carta náutica con un círculo rojo alrededor de un archipiélago sin nombre. <em>"Kael tiene aquí veinte barcos de guerra. Suficiente para tomar la capital si la flota real está dispersa en el sur."</em> Clava la vista en ti. <em>"¿Sigues queriéndolo encontrar?"</em>`,
+    events:[
+      {type:'event',who:'Capitán Drace',txt:'Aliado formal. Zarpa en dos horas.'},
+      {type:'warning',who:'Flota de Kael',txt:'20 barcos. Archipiélago sin nombre en carta oficial.'},
+      {type:'mystery',who:'Carta manipulada',txt:'El archipiélago fue borrado de los registros de la Corona. Alguien con acceso lo hizo.'},
+    ],
+    memKeys:['alianza_drace','flota_kael','archipielago_borrado'],
+    choices:[
+      {k:'A',text:'Zarpar ya con Drace hacia el archipiélago'},
+      {k:'B',text:'Pedir 48 horas para buscar refuerzos en la ciudad'},
+      {k:'C',text:'Exigir prueba física de que la flota existe'},
+    ]
+  },
+  'Zarpar ya con Drace hacia el archipiélago':{
+    label:'Alta Mar',
+    scene:`El viento llena las velas al atardecer. Al tercer día, un barco de vigía de Kael aparece en el horizonte y cambia el rumbo hacia vosotros. Drace ordena izar una bandera de mercante neutral. <em>"Si nos abordan, eres mi cocinero. Un cocinero mudo, si puedes."</em> El barco enemigo se acerca. Ocho cañones apuntando.`,
+    events:[
+      {type:'enemy',who:'Barco vigía de Kael',txt:'8 cañones. Abordaje inminente si no se convencen.'},
+      {type:'event',who:'Bandera neutral',txt:'Tapadera activada. Todo depende de que la historia se sostenga.'},
+    ],
+    memKeys:['interceptados','tapadera_mercante'],
+    choices:[
+      {k:'A',text:'Mantener la tapadera de cocinero'},
+      {k:'B',text:'Disparar primero y escapar'},
+      {k:'C',text:'Rendirse y usar la captura como acceso al archipiélago'},
+    ]
+  },
+
+  /* ── RAMA C: Bodega y los prisioneros */
+  'Colarte en la bodega del Viento Ciego':{
+    label:'Bodega',
+    scene:`Cedro húmedo y olor a salitre. Entre los barriles de pólvora encuentras algo que no esperabas: tres hombres con uniformes desgarrados de oficiales navales de la Corona, encadenados a la quilla. Uno te reconoce —sus ojos se abren de par en par— y mueve la cabeza hacia la escotilla con urgencia. Pasos en cubierta. Alguien baja.`,
+    events:[
+      {type:'enemy',who:'Prisioneros navales',txt:'Tres oficiales de la Corona encadenados en bodega de barco mercante.'},
+      {type:'warning',who:'Escotilla',txt:'Alguien baja ahora. Cinco segundos para esconderte o actuar.'},
+    ],
+    memKeys:['prisioneros_bodega','oficial_reconocio'],
+    choices:[
+      {k:'A',text:'Esconderte detrás de los barriles de pólvora'},
+      {k:'B',text:'Cortar la mordaza al oficial que te reconoció'},
+      {k:'C',text:'Sacar el cuchillo y esperar al que baja'},
+    ]
+  },
+  'Cortar la mordaza al oficial que te reconoció':{
+    label:'Cdr. Veris',
+    scene:`Jadea. Susurro urgente y preciso: <em>"Comandante Veris, Flota del Norte. Este barco lleva armas al Archipiélago de las Almas bajo órdenes del Almirante Kael. Si la Flota Real no llega allí antes del amanecer de pasado mañana, los rebeldes tienen suficiente para tomar el Estrecho del Rey."</em> Los pasos se detienen sobre vuestra cabeza.`,
+    events:[
+      {type:'event',who:'Cdr. Veris',txt:'Drace es agente de Kael. Las armas en bodega son para la flota rebelde.'},
+      {type:'warning',who:'Plazo',txt:'Pasado mañana al amanecer. Horas contadas para avisar a la Flota Real.'},
+      {type:'mystery',who:'Archipiélago de las Almas',txt:'La misma ubicación sin nombre de la carta de Drace. Base de Kael.'},
+    ],
+    memKeys:['drace_agente_kael','plazo_critico','mismo_archipielago'],
+    choices:[
+      {k:'A',text:'Liberar a Veris y los tres oficiales ahora'},
+      {k:'B',text:'Pedirle que espere — necesitas más información'},
+      {k:'C',text:'Usar la info para negociar con Drace'},
+    ]
+  },
+  'Liberar a Veris y los tres oficiales ahora':{
+    label:'Motín',
+    scene:`Las cadenas ceden. Veris se pone en pie con dificultad pero con determinación en los ojos. Con cuatro personas tienes opciones que no tenías antes. Cuenta los pasos sobre vuestra cabeza: tres guardias en cubierta, Drace en el puente. <em>"Necesitamos el timón y el libro de señales,"</em> dice Veris en voz muy baja. <em>"El resto es fuerza bruta."</em>`,
+    events:[
+      {type:'event',who:'Cdr. Veris',txt:'Operativo. Objetivo: timón y libro de señales para enviar aviso a la Flota Real.'},
+      {type:'warning',who:'Guardia de cubierta',txt:'Tres en cubierta. Drace en el puente. Todos armados.'},
+    ],
+    memKeys:['veris_libre','mOTIN_activo'],
+    choices:[
+      {k:'A',text:'Subir por la escotilla de proa en silencio'},
+      {k:'B',text:'Crear distracción incendiando un barril pequeño'},
+      {k:'C',text:'Enviar a Veris arriba mientras tú retienes la escotilla'},
+    ]
+  },
+  'Esconderte detrás de los barriles de pólvora':{
+    label:'Escondido',
+    scene:`Te aplastas entre dos barriles. Un marinero de cuello ancho baja con un farol, revisa el inventario durante tres minutos eternos y vuelve a subir sin mirarte. Cuando el silencio vuelve, el oficial que te reconoció te mira con los ojos muy abiertos y señala su oído con el mentón: <em>están escuchando arriba.</em>`,
+    events:[
+      {type:'event',who:'Marinero',txt:'Revisión de inventario rutinaria. No te vio. Pero volverá.'},
+      {type:'mystery',who:'Oficial prisionero',txt:'Señala hacia arriba. Hay alguien escuchando en el sollado.'},
+    ],
+    memKeys:['no_detectado','espias_arriba'],
+    choices:[
+      {k:'A',text:'Esperar a que anochezca para actuar'},
+      {k:'B',text:'Cortar la mordaza del oficial ahora mismo'},
+      {k:'C',text:'Intentar escapar del barco antes de que zarpe'},
+    ]
+  },
+};
+
+/* ══════════════════════════ STATE */
+let CUR='root';
+let nodeCount=1,maxDepth=0,branches=0;
+const NW=122,NH=33,HGAP=42,VGAP=70;
+const POS={root:{x:89,y:50}};
+
+const COLS=[
+  {fill:'rgba(74,124,247,.12)', stroke:'#4a7cf7', txt:'#2556e0'},
+  {fill:'rgba(14,184,160,.1)',  stroke:'#0eb8a0', txt:'#087060'},
+  {fill:'rgba(139,92,246,.1)', stroke:'#8b5cf6', txt:'#6030c0'},
+  {fill:'rgba(245,158,11,.1)', stroke:'#f59e0b', txt:'#a06000'},
+  {fill:'rgba(240,86,122,.1)', stroke:'#f0567a', txt:'#b03050'},
+  {fill:'rgba(16,185,129,.1)', stroke:'#10b981', txt:'#077050'},
+];
+
+/* ══════════════════════════ LAYOUT */
+function layout(node,x,y,d){
+  POS[node.id]={x,y};node.depth=d;
+  if(d>maxDepth)maxDepth=d;
+  const ch=node.children||[];
+  if(!ch.length)return;
+  const tw=ch.length*NW+(ch.length-1)*HGAP;
+  const sx=x+NW/2-tw/2;
+  ch.forEach((cid,i)=>{if(NODES[cid])layout(NODES[cid],sx+i*(NW+HGAP),y+NH+VGAP,d+1);});
+}
+
+function isAnc(aid,bid){
+  if(aid===bid)return true;
+  function par(id){for(const k in NODES)if((NODES[k].children||[]).includes(id))return k;return null;}
+  let c=bid;while(c){if(c===aid)return true;c=par(c);}return false;
+}
+
+const $s=t=>document.createElementNS('http://www.w3.org/2000/svg',t);
+function sa(el,o){for(const k in o)el.setAttribute(k,o[k]);return el;}
+
+/* ══════════════════════════ RENDER */
+function renderTree(newId){
+  layout(NODES.root,89,50,0);
+  const gE=document.getElementById('treeEdges');
+  const gN=document.getElementById('treeNodes');
+  gE.innerHTML='';gN.innerHTML='';
+  drawEdges(gE,NODES.root,newId);
+  drawNodes(gN,NODES.root,newId);
+  document.getElementById('sN').textContent=nodeCount;
+  document.getElementById('sD').textContent=maxDepth;
+  document.getElementById('sB').textContent=branches;
+  document.getElementById('bc2').textContent=NODES[CUR].label;
+  renderDpips();
+}
+
+function drawEdges(g,node,newId){
+  const p=POS[node.id];if(!p)return;
+  (node.children||[]).forEach(cid=>{
+    const cp=POS[cid];if(!cp)return;
+    const on=isAnc(node.id,CUR)&&isAnc(cid,CUR);
+    const isNew=cid===newId;
+    const mid=(p.y+NH+cp.y)/2;
+    const path=sa($s('path'),{
+      d:`M${p.x+NW/2},${p.y+NH} C${p.x+NW/2},${mid} ${cp.x+NW/2},${mid} ${cp.x+NW/2},${cp.y}`,
+      fill:'none',
+      stroke:on?'#4a7cf7':'rgba(120,140,200,.28)',
+      'stroke-width':on?'1.8':'1',
+      'marker-end':on?'url(#ahb)':'url(#ah)',
+    });
+    if(isNew){
+      path.style.strokeDasharray='500';
+      path.style.strokeDashoffset='500';
+      path.style.opacity='0';
+      path.style.animation='wireIn .65s cubic-bezier(.34,1.56,.64,1) forwards';
+    }
+    g.appendChild(path);
+    if(NODES[cid])drawEdges(g,NODES[cid],newId);
+  });
+  /* ghost stubs from current leaf — short dashes only */
+  if(node.id===CUR&&!(node.children||[]).length){
+    const n=(node.choices||[]).length;
+    const cx=p.x+NW/2,cy=p.y+NH;
+    for(let i=0;i<n;i++){
+      const ang=(i-(n-1)/2)*0.34;
+      const ex=cx+Math.sin(ang)*50,ey=cy+34;
+      g.appendChild(sa($s('path'),{
+        d:`M${cx},${cy} Q${cx+(ex-cx)*.5},${cy+13} ${ex},${ey}`,
+        fill:'none',stroke:'rgba(120,140,200,.2)',
+        'stroke-width':'1','stroke-dasharray':'3 3',
+        'marker-end':'url(#ahg)',
+      }));
+    }
+  }
+}
+
+function drawNodes(g,node,newId){
+  const p=POS[node.id];if(!p)return;
+  const isCur=node.id===CUR;
+  const onPath=isAnc(node.id,CUR);
+  const col=COLS[node.depth%COLS.length];
+  const grp=$s('g');
+  grp.setAttribute('data-id',node.id);
+  grp.setAttribute('role','button');
+  grp.setAttribute('tabindex','0');
+  grp.setAttribute('aria-label',`${node.label}${isCur?' (activo)':''}`);
+  grp.style.cursor='pointer';
+
+  if(node.id===newId){
+    grp.style.transformOrigin=`${p.x+NW/2}px ${p.y+NH/2}px`;
+    grp.style.animation='nodeIn .5s cubic-bezier(.34,1.56,.64,1) both';
+  }
+
+  if(isCur){
+    /* soft glow */
+    const glow=sa($s('rect'),{
+      x:p.x-8,y:p.y-8,width:NW+16,height:NH+16,rx:14,
+      fill:col.fill,opacity:'.7',filter:'url(#glow-f)',
+    });
+    grp.appendChild(glow);
+    /* ring */
+    const ring=sa($s('rect'),{
+      x:p.x-4,y:p.y-4,width:NW+8,height:NH+8,rx:11,
+      fill:'none',stroke:col.stroke,'stroke-width':'1.4',
+    });
+    ring.style.animation='ringFloat 1.8s ease-in-out infinite';
+    grp.appendChild(ring);
+  }
+
+  /* main pill */
+  const bg=sa($s('rect'),{
+    x:p.x,y:p.y,width:NW,height:NH,rx:8,
+    fill:isCur?col.fill:onPath?'rgba(255,255,255,.75)':'rgba(255,255,255,.5)',
+    stroke:isCur?col.stroke:onPath?'rgba(120,140,200,.5)':'rgba(180,190,220,.4)',
+    'stroke-width':isCur?'1.6':onPath?'1.2':'0.8',
+  });
+  grp.appendChild(bg);
+
+  const lbl=node.label.length>14?node.label.slice(0,13)+'…':node.label;
+  const txt=sa($s('text'),{
+    x:p.x+NW/2,y:p.y+NH/2+1,
+    'text-anchor':'middle','dominant-baseline':'central',
+    fill:isCur?col.txt:onPath?'#384060':'#9aa0c0',
+    'font-size':'10.5','font-weight':isCur?'700':onPath?'600':'400',
+    'font-family':'Plus Jakarta Sans,sans-serif','letter-spacing':'0.01em',
+  });
+  txt.textContent=lbl;
+  grp.appendChild(txt);
+
+  if(isCur){
+    const dep=sa($s('text'),{
+      x:p.x+NW-4,y:p.y+4,'text-anchor':'end','dominant-baseline':'hanging',
+      fill:col.stroke,'font-size':'7.5','font-family':'JetBrains Mono,monospace',opacity:'.65',
+    });
+    dep.textContent=`D${node.depth}`;
+    grp.appendChild(dep);
+  }
+
+  grp.addEventListener('click',()=>{
+    if(node.id!==CUR&&(node.children||[]).length>0)navTo(node.id);
+  });
+  g.appendChild(grp);
+  (node.children||[]).forEach(cid=>{if(NODES[cid])drawNodes(g,NODES[cid],newId);});
+}
+
+/* ══════════════════════════ NARRATIVE */
+function updateNarr(node){
+  const loc=document.getElementById('nloc');
+  const sc=document.getElementById('nscene');
+  const evList=document.getElementById('evList');
+  if(!loc||!sc||!evList)return;
+  const tgts=[loc,sc,evList].filter(Boolean);
+
+  gsap.to(tgts,{opacity:0,y:-5,duration:.14,ease:'power2.in',onComplete:()=>{
+    loc.textContent=`${node.label} · Profundidad ${node.depth}`;
+
+    /* memory echoes in scene */
+    let html=node.scene||'';
+    if(MEM['drace_agente_kael']&&html.includes('Drace'))
+      html+='<br><br><span style="font-family:var(--f-mono);font-size:.78rem;color:var(--blue)">◆ Memoria: Drace confirmado agente de Kael.</span>';
+    if(MEM['eres_objetivo']&&(html.includes('Kael')||html.includes('lista')))
+      html+='<br><span style="font-family:var(--f-mono);font-size:.78rem;color:var(--rose)">◆ Alerta: tu nombre también está en la lista.</span>';
+    if(MEM['mira_seneuelo']&&html.includes('Mira'))
+      html=html.replace('Mira','Mira <span style="font-family:var(--f-mono);font-size:.78rem;color:var(--amber)">[señuelo confirmado]</span>');
+    sc.innerHTML=html;
+
+    const icons={
+      enemy:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+      event:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`,
+      warning:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>`,
+      mystery:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>`,
+      memory:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 6v4l3 3"/></svg>`,
+    };
+    evList.innerHTML='';
+    (node.events||[]).forEach((ev,i)=>{
+      const c=document.createElement('div');
+      c.className=`ev-card ${ev.type}`;
+      c.innerHTML=`<div class="ev-ico">${icons[ev.type]||''}</div><div><div class="ev-who">${ev.who}</div><div class="ev-txt">${ev.txt}</div></div>`;
+      evList.appendChild(c);
+      gsap.fromTo(c,{opacity:0,x:10},{opacity:1,x:0,duration:.22,delay:i*.08,ease:'power2.out'});
+    });
+
+    gsap.fromTo(tgts,{opacity:0,y:8},{opacity:1,y:0,duration:.26,ease:'power2.out'});
+  }});
+
+  /* register memories */
+  if(node.memKeys&&node.memKeys.length){
+    const evs=node.events||[];
+    node.memKeys.forEach((k,i)=>{
+      const ev=evs[i]||evs[0];
+      if(ev&&ev.who&&ev.txt)addMem(k,ev.who,ev.txt,node.id);
+    });
+  }
+
+  renderDpips(node.depth);
+  setTimeout(()=>{const ns=document.getElementById('narrScroll');if(ns)ns.scrollTop=0;},120);
+}
+
+function renderDpips(cur=0){
+  const row=document.getElementById('dprow');if(!row)return;
+  const total=Math.max(maxDepth+2,6);
+  row.innerHTML='';
+  for(let i=0;i<total;i++){
+    const d=document.createElement('div');
+    d.className='dp'+(i<cur?' done':i===cur?' here':'');
+    row.appendChild(d);
+  }
+}
+
+/* ══════════════════════════ CHOICES */
+function renderChoices(choices){
+  const stack=document.getElementById('cstack');if(!stack)return;
+  gsap.to(stack,{opacity:0,y:4,duration:.12,onComplete:()=>{
+    stack.innerHTML='';
+    if(!choices||!choices.length){
+      stack.innerHTML='<p style="font-family:var(--f-mono);font-size:.6rem;color:var(--ink4);padding:4px 0">Fin de esta rama.</p>';
+      gsap.to(stack,{opacity:1,y:0,duration:.18});return;
+    }
+    choices.forEach((ch,i)=>{
+      const c=document.createElement('div');
+      c.className='cc';c.tabIndex=0;
+      c.dataset.choice=ch.text;
+      c.setAttribute('aria-label',`Opción ${ch.k}: ${ch.text}`);
+      const mem=hasMem(ch.text);
+      c.innerHTML=`
+        <span class="cck">${ch.k}</span>
+        <span class="cctxt">${ch.text}</span>
+        ${mem?'<span class="cc-mem">◆ memoria</span>':''}
+        <svg class="ccgrip" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="8" cy="5" r="1.2"/><circle cx="16" cy="5" r="1.2"/>
+          <circle cx="8" cy="12" r="1.2"/><circle cx="16" cy="12" r="1.2"/>
+          <circle cx="8" cy="19" r="1.2"/><circle cx="16" cy="19" r="1.2"/>
+        </svg>`;
+      setupDrag(c);
+      c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();commit(ch.text);}});
+      stack.appendChild(c);
+      gsap.fromTo(c,{opacity:0,y:6},{opacity:1,y:0,duration:.2,delay:i*.07,ease:'power2.out'});
+    });
+    gsap.to(stack,{opacity:1,y:0,duration:.18});
+  }});
+}
+
+/* ══════════════════════════ DRAG */
+const ghost=document.getElementById('ghost');
+function nodeSC(id){
+  const svg_=document.getElementById('treeSvg'),cvs=document.getElementById('treeCanvas');
+  const p=POS[id];if(!p)return null;
+  const vb=svg_.viewBox.baseVal,r=cvs.getBoundingClientRect();
+  const sx=r.width/vb.width,sy=r.height/vb.height;
+  return{cx:r.left+(p.x+NW/2-vb.x)*sx,cy:r.top+(p.y+NH/2-vb.y)*sy,rad:Math.max(NW*sx,NH*sy)*.7};
+}
+function nearCur(mx,my){const c=nodeSC(CUR);if(!c)return false;return Math.hypot(mx-c.cx,my-c.cy)<c.rad+22;}
+
+function setupDrag(card){
+  card.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;
+    e.preventDefault();
+    const TEXT=card.dataset.choice; /* captured once, never mutated */
+    let snap=false,moved=false;
+    const cr=card.getBoundingClientRect();
+    ghost.textContent=TEXT;ghost.className='';
+    gsap.set(ghost,{display:'block',left:cr.left,top:cr.top,opacity:0,scale:.88,rotation:0});
+
+    function move(ev){
+      const mx=ev.clientX,my=ev.clientY;
+      if(!moved){
+        if(Math.hypot(mx-e.clientX,my-e.clientY)<5)return;
+        moved=true;
+        gsap.to(ghost,{opacity:1,scale:1.05,rotation:1.8,duration:.2,ease:'back.out(2)'});
+        gsap.to(card,{opacity:.3,scale:.95,duration:.14});
+        document.querySelectorAll('.cc').forEach(c=>{if(c!==card)gsap.to(c,{opacity:.45,scale:.97,duration:.1});});
+        document.getElementById('hint').classList.add('gone');
+      }
+      const near=nearCur(mx,my);
+      if(near&&!snap){
+        snap=true;ghost.classList.add('snap');
+        const c=nodeSC(CUR);
+        if(c)gsap.to(ghost,{left:c.cx-ghost.offsetWidth/2,top:c.cy-ghost.offsetHeight/2,scale:.8,rotation:0,duration:.26,ease:'back.out(1.8)'});
+        const ng=document.querySelector(`[data-id="${CUR}"]`);
+        const tp=POS[CUR];
+        if(ng&&tp)gsap.to(ng,{scale:1.08,duration:.2,ease:'back.out(2)',transformOrigin:`${tp.x+NW/2}px ${tp.y+NH/2}px`});
+      }else if(!near&&snap){
+        snap=false;ghost.classList.remove('snap');
+        gsap.to(ghost,{scale:1.05,rotation:1.8,duration:.18,ease:'back.out(1.8)'});
+        const ng=document.querySelector(`[data-id="${CUR}"]`);
+        const tp=POS[CUR];
+        if(ng&&tp)gsap.to(ng,{scale:1,duration:.14,transformOrigin:`${tp.x+NW/2}px ${tp.y+NH/2}px`});
+      }else if(!snap){
+        gsap.to(ghost,{left:mx-ghost.offsetWidth/2,top:my-ghost.offsetHeight/2-8,duration:.04,ease:'none'});
+      }
+    }
+
+    function up(){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      gsap.to(card,{opacity:1,scale:1,duration:.18,ease:'back.out(1.5)'});
+      document.querySelectorAll('.cc').forEach(c=>gsap.to(c,{opacity:1,scale:1,duration:.14}));
+      const ng=document.querySelector(`[data-id="${CUR}"]`);
+      const tp=POS[CUR];
+      if(ng&&tp)gsap.to(ng,{scale:1,duration:.12,transformOrigin:`${tp.x+NW/2}px ${tp.y+NH/2}px`});
+
+      if(moved&&snap){
+        const c=nodeSC(CUR);
+        if(c)gsap.to(ghost,{left:c.cx-ghost.offsetWidth/2,top:c.cy-ghost.offsetHeight/2,scale:.15,opacity:0,rotation:0,duration:.22,ease:'power3.in',onComplete:()=>gsap.set(ghost,{display:'none'})});
+        else gsap.set(ghost,{display:'none'});
+        setTimeout(()=>commit(TEXT),70);
+      }else{
+        const cr2=card.getBoundingClientRect();
+        gsap.to(ghost,{left:cr2.left,top:cr2.top,scale:.88,opacity:0,rotation:0,duration:.2,ease:'power2.in',onComplete:()=>gsap.set(ghost,{display:'none'})});
+      }
+    }
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
+  });
+}
+
+/* ══════════════════════════ COMMIT — all bugs fixed here */
+function commit(choiceText){
+  const parent=NODES[CUR];
+  if(!parent)return;
+  if(!Array.isArray(parent.children))parent.children=[]; /* guard */
+
+  const data=DB[choiceText];
+  const newId='n'+(++nodeCount);
+
+  const safeLabel=data
+    ?data.label
+    :(typeof choiceText==='string'?choiceText.slice(0,13):'Nodo');
+
+  let scene=data?data.scene:`Eliges: <em>${choiceText}</em>.`;
+
+  /* contextual memory echoes */
+  if(data&&MEM['drace_agente_kael']&&scene.includes('Drace'))
+    scene+='<br><br><span style="font-family:var(--f-mono);font-size:.78rem;color:var(--blue)">◆ Memoria: Drace es agente de Kael.</span>';
+  if(data&&MEM['eres_objetivo']&&scene.includes('Kael'))
+    scene+='<br><span style="font-family:var(--f-mono);font-size:.78rem;color:var(--rose)">◆ Alerta: tú también eres objetivo.</span>';
+
+  const newNode={
+    id:newId,label:safeLabel,
+    depth:(parent.depth||0)+1,
+    scene,
+    events: data?data.events:[],
+    choices:data?data.choices:[],
+    memKeys:data?data.memKeys:[],
+    children:[], /* ALWAYS initialize */
+  };
+
+  NODES[newId]=newNode;
+  parent.children.push(newId); /* safe: both guaranteed above */
+  branches++;
+  if(newNode.depth>maxDepth)maxDepth=newNode.depth;
+
+  CUR=newId;
+  renderTree(newId);
+  updateNarr(newNode);
+  renderChoices(newNode.choices);
+  toast(`"${newNode.label}" añadido al árbol`);
+  setTimeout(()=>centerOn(newId),80);
+}
+
+function navTo(id){CUR=id;renderTree();updateNarr(NODES[id]);renderChoices(NODES[id].choices);}
+
+/* ══════════════════════════ ZOOM / PAN */
+const SVG_=document.getElementById('treeSvg');
+let VB={x:-200,y:-40,w:700,h:500};
+const applyVB=()=>SVG_.setAttribute('viewBox',`${VB.x} ${VB.y} ${VB.w} ${VB.h}`);
+document.getElementById('zIn').onclick=()=>{VB.x+=VB.w*.1;VB.y+=VB.h*.1;VB.w*=.8;VB.h*=.8;applyVB();};
+document.getElementById('zOut').onclick=()=>{VB.x-=VB.w*.12;VB.y-=VB.h*.12;VB.w*=1.24;VB.h*=1.24;applyVB();};
+document.getElementById('zFit').onclick=()=>{VB={x:-200,y:-40,w:700,h:500};applyVB();};
+
+const CVC=document.getElementById('treeCanvas');
+let panning=false,ps={x:0,y:0};
+CVC.addEventListener('mousedown',e=>{if(e.target.closest('[data-id]'))return;panning=true;ps={x:e.clientX,y:e.clientY};});
+document.addEventListener('mousemove',e=>{if(!panning)return;const dx=(e.clientX-ps.x)*(VB.w/CVC.offsetWidth);const dy=(e.clientY-ps.y)*(VB.h/CVC.offsetHeight);VB.x-=dx;VB.y-=dy;ps={x:e.clientX,y:e.clientY};applyVB();});
+document.addEventListener('mouseup',()=>panning=false);
+CVC.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY>0?1.1:.9;const r=CVC.getBoundingClientRect();const mx=(e.clientX-r.left)/r.width,my=(e.clientY-r.top)/r.height;const cx=VB.x+mx*VB.w,cy=VB.y+my*VB.h;VB.w*=f;VB.h*=f;VB.x=cx-mx*VB.w;VB.y=cy-my*VB.h;applyVB();},{passive:false});
+
+function centerOn(id){const p=POS[id];if(!p)return;gsap.to(VB,{x:p.x+NW/2-VB.w/2,y:p.y+NH/2-VB.h/2-60,duration:.5,ease:'power2.out',onUpdate:applyVB});}
+
+/* ══════════════════════════ UTILS */
+document.querySelectorAll('.htab').forEach(b=>b.addEventListener('click',function(){
+  document.querySelectorAll('.htab').forEach(x=>{x.classList.remove('on');x.removeAttribute('aria-selected');});
+  this.classList.add('on');this.setAttribute('aria-selected','true');
+}));
+function toast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+/* ══════════════════════════ INIT */
+renderTree();
+updateNarr(NODES.root);
+renderChoices(NODES.root.choices);
+applyVB();
+</script>
+</body>
+</html>

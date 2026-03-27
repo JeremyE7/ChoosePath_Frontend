@@ -29,6 +29,7 @@ import type {
   OllamaChatRequest,
   OllamaChatResponse,
 } from './story.types.js';
+import { environment } from '../environments/environment.js';
 
 export const storyRouter = Router();
 
@@ -36,8 +37,8 @@ export const storyRouter = Router();
 // Config
 // ─────────────────────────────────────────────────────────────────────────────
 
-const OLLAMA_URL = process.env['OLLAMA_URL'] ?? 'http://localhost:11434';
-const OLLAMA_MODEL = process.env['OLLAMA_MODEL'] ?? 'llama3.1';
+const OLLAMA_URL = environment.ollamaUrl ?? 'http://localhost:11434';
+const OLLAMA_MODEL = environment.ollamaModel ?? 'llama3.1';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Ollama helper
@@ -58,14 +59,15 @@ async function callOllama(systemPrompt: string, userPrompt: string): Promise<unk
       num_predict: 4096,
     },
   };
-
-  const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+  console.log("llamando a ollama", OLLAMA_URL)
+  const response = await fetch(`${OLLAMA_URL}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-
+  console.log(response)
   if (!response.ok) {
+    console.log("lfjsdlkf")
     const text = await response.text();
     throw new Error(`Ollama returned ${response.status}: ${text}`);
   }
@@ -110,6 +112,7 @@ storyRouter.post('/generate', async (req: Request, res: Response) => {
     res.json(result as GenerateResponse);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.log(err)
     console.error('[/generate] Error:', message);
     res.status(502).json({ error: 'Story generation failed', detail: message });
   }

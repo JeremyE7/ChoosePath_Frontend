@@ -20,6 +20,7 @@ import {
   TREE_CONFIG,
 } from '../models/story.model';
 import { StoryDataService } from './story-data.service';
+import { GenerateRequest } from '../../server/story.types';
 
 const DEFAULT_VIEWBOX: ViewBox = { x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 };
 
@@ -72,8 +73,8 @@ export class StoryService {
    * Load and initialize a story by its slug.
    * Fetches the JSON via StoryDataService, then builds the root node.
    */
-  loadStory(storyId: string): void {
-    this.storyDataService.loadStory(storyId).subscribe({
+  loadStory(storyTheme: Partial<GenerateRequest>): void {
+    this.storyDataService.loadStory(storyTheme).subscribe({
       next: (data) => {
         this.storyData = data;
         this._initFromLoadedData();

@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { StoryData } from '../models/story.model';
+import { environment } from '../../environments/environment';
+import { GenerateRequest } from '../../server/story.types';
 // import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -14,7 +16,7 @@ export class StoryDataService {
    * To switch to a backend, replace the URL:
    *   return this.http.get<StoryData>(`${environment.apiUrl}/stories/${storyId}`);
    */
-  loadStory(storyId: string): Observable<StoryData> {
-    return this.http.get<StoryData>(`/stories/${storyId}.json`);
+  loadStory(storyTheme: Partial<GenerateRequest>): Observable<StoryData> {
+    return this.http.post<StoryData>(environment.apiUrl + '/generate', storyTheme);
   }
 }

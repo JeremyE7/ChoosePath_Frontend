@@ -254,7 +254,12 @@ export class App implements OnInit {
   // ==========================================================================
 
   ngOnInit(): void {
-    this.storyService.loadStory('el-galeon-de-la-niebla');
+    this.storyService.loadStory({
+      genre: "Terror",
+      language: "Español",
+      theme: "Visitas a tu familia en tu pueblo de la infancia pero todo tiene un ambiente mas funebre, nublado y oscuro, empiezas a notar como tu familia actua de forma antinatural y todo el pueblo tiene una mirada y sonrisa perturbadoramente grande, tienes que investigar que esta pasando en el pueblo y sobre todo averiguar si esa gente verdaderamente es tu familia",
+      tone: "Tetrico, horror cosmico y turbio al extremo"
+    });
   }
 
   // ==========================================================================

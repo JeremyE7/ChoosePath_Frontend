@@ -1,6 +1,6 @@
 <div id="mem-notif" aria-live="polite" aria-label="Nuevas memorias">
-  @for (notif of notifications(); track notif.who) {
-    <div class="mn">
+  @if (current()) {
+    <div class="mn" [class.visible]="isVisible()">
       <div class="mn-top">
         <div class="mn-icon">
           <svg
@@ -11,15 +11,16 @@
             stroke="#4a7cf7"
             stroke-width="2"
             stroke-linecap="round"
+            aria-hidden="true"
           >
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v4l3 3" />
           </svg>
         </div>
-        <div class="mn-who">{{ notif.who }}</div>
+        <div class="mn-who">{{ current()!.who }}</div>
       </div>
-      <div class="mn-txt">{{ notif.txt }}</div>
-      <div class="mn-tag">recordara esto</div>
+      <div class="mn-txt">{{ current()!.txt }}</div>
+      <div class="mn-tag">recordará esto</div>
     </div>
   }
 </div>

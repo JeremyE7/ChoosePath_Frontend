@@ -1,0 +1,215 @@
+{
+  "title": "El Galeón de la Niebla",
+  "rootNodeId": "puerto",
+  "nodes": {
+    "puerto": {
+      "label": "Puerto",
+      "scene": "El alba tiñe Portum Velorum de color melocotón y sal. Los estibadores maldicen en tres idiomas mientras los galeones mecen sus cadenas. Junto al farol del muelle siete, una figura encapuchada te observa fijamente. Al fondo, el Capitán Drace supervisa la carga del <em>Viento Ciego</em> sin apartar la mano de su pistola. Aún no te ha visto.",
+      "choices": [
+        { "key": "A", "text": "Acercarte a la figura del muelle siete", "nextNodeId": "mira" },
+        { "key": "B", "text": "Abordar a Drace antes de que zarpe", "nextNodeId": "cubierta" },
+        { "key": "C", "text": "Colarte en la bodega del Viento Ciego", "nextNodeId": "bodega" }
+      ],
+      "events": [],
+      "memoryKeys": []
+    },
+
+    "mira": {
+      "label": "Mira",
+      "scene": "La figura aparta la capucha. Es Mira Solano —espía de la Corona que creías muerta en el naufragio de Tarsis hace dos años. Cicatriz fresca desde la ceja izquierda hasta el mentón. Te empuja hacia las sombras y habla deprisa: <em>\"El Almirante Kael vende información a los rebeldes. Lleva este sello al Juez Harren de Isla Negra. Nadie más lo puede abrir.\"</em> Te pone en la palma un disco de lacre negro con un sello de cuervo. Desaparece antes de que puedas responder.",
+      "choices": [
+        { "key": "A", "text": "Buscar a Drace para cruzar a Isla Negra", "nextNodeId": "drace_a" },
+        { "key": "B", "text": "Romper el sello y leer el mensaje", "nextNodeId": "el_mensaje" },
+        { "key": "C", "text": "Seguir a Mira entre la niebla", "nextNodeId": "trampa" }
+      ],
+      "events": [
+        { "type": "mystery", "who": "Mira Solano", "description": "Viva. Dos años desaparecida. La cicatriz es de interrogatorio reciente." },
+        { "type": "event", "who": "Sello de cuervo", "description": "Lacre negro. Solo el Juez Harren puede abrirlo legítimamente." }
+      ],
+      "memoryKeys": ["mira_viva", "kael_traidor"]
+    },
+
+    "drace_a": {
+      "label": "Drace-A",
+      "scene": "Drace te escucha con los ojos entornados. Lleva el nombre del Almirante Kael tatuado en el antebrazo —símbolo de viejo juramento de lealtad marina. Mira el bulto en tu bolsillo. <em>\"Doce monedas de oro o el sello. Elige.\"</em> Alguien del puerto ya le dijo que ibas a venir.",
+      "choices": [
+        { "key": "A", "text": "Pagar las doce monedas y conservar el sello", "nextNodeId": "en_mar" },
+        { "key": "B", "text": "Negarte: buscar otro barco", "nextNodeId": null },
+        { "key": "C", "text": "Acusar a Drace de espionaje en voz alta", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "enemy", "who": "Capitan Drace", "description": "Conoce el sello antes de que hablaras. Fue avisado." },
+        { "type": "warning", "who": "Tatuaje de Kael", "description": "Drace lleva el nombre del Almirante. Lealtad antigua, quizás activa." }
+      ],
+      "memoryKeys": ["drace_informado", "drace_kael"]
+    },
+
+    "en_mar": {
+      "label": "En Mar",
+      "scene": "El Viento Ciego zarpa al mediodía. Esa noche, en alta mar, Drace baja a tu camarote. Cierra la puerta. <em>\"Voy a ser directo contigo. El Almirante Kael me paga para saber quién lleva mensajes a Harren. Puedo olvidar que existes por veinte monedas más, o puedo recordarlo perfectamente.\"</em> Una pausa. <em>\"Tú decides.\"</em>",
+      "choices": [
+        { "key": "A", "text": "Pagar las veinte monedas adicionales", "nextNodeId": null },
+        { "key": "B", "text": "Atacar a Drace y tomar el control", "nextNodeId": null },
+        { "key": "C", "text": "Revelar el contenido del sello para negociar", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "enemy", "who": "Capitan Drace", "description": "Confirmado: trabaja para Kael. El pasaje fue una trampa." },
+        { "type": "warning", "who": "Alta mar", "description": "Sin escapatoria. Isla Negra aún a doce horas." }
+      ],
+      "memoryKeys": ["drace_agente_kael", "trampa_barco"]
+    },
+
+    "el_mensaje": {
+      "label": "El Mensaje",
+      "scene": "El lacre cede. Tres nombres escritos con tinta roja. Una fecha: <em>mañana al amanecer.</em> Almirante Kael. Juez Harren. Y el tuyo. No eres el mensajero. Eres el tercero en la lista de eliminación. Mira fue engañada para entregarte el pergamino —o tú fuiste engañado para recibirlo.",
+      "choices": [
+        { "key": "A", "text": "Correr a advertir a Mira del engaño", "nextNodeId": null },
+        { "key": "B", "text": "Destruir el pergamino y huir del puerto", "nextNodeId": null },
+        { "key": "C", "text": "Ir directamente al Almirante Kael", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "warning", "who": "Lista roja", "description": "Tu nombre en la lista junto a Kael y Harren. Objetivo, no enviado." },
+        { "type": "mystery", "who": "Autor desconocido", "description": "Quien escribió esto conocía tu identidad. Planificó con días de antelación." }
+      ],
+      "memoryKeys": ["eres_objetivo", "sello_roto"]
+    },
+
+    "trampa": {
+      "label": "Trampa",
+      "scene": "La sigues tres minutos entre callejones de carga. Cuando la niebla se espesa junto a los almacenes de popa, Mira se detiene. No está sola: dos guardias con uniformes de la armada real la flanquean. Se gira hacia ti muy despacio: <em>\"Lo siento. No tuve alternativa.\"</em>",
+      "choices": [
+        { "key": "A", "text": "Luchar para abrirte paso al muelle", "nextNodeId": null },
+        { "key": "B", "text": "Lanzar el sello al mar y rendirte", "nextNodeId": null },
+        { "key": "C", "text": "Exigir hablar con el oficial superior", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "enemy", "who": "Guardia Izquierda", "description": "Bloquea la salida al embarcadero. Espada a medias." },
+        { "type": "enemy", "who": "Guardia Derecha", "description": "Cierra el callejón. Grilletes en el cinto." },
+        { "type": "warning", "who": "Mira Solano", "description": "Señuelo. El sello que entregó es falso, de cera pintada." }
+      ],
+      "memoryKeys": ["mira_seneuelo", "sello_falso", "trampa_armada"]
+    },
+
+    "cubierta": {
+      "label": "Cubierta",
+      "scene": "Subes la pasarela sin que nadie te detenga. Drace lo observa y sonríe de lado. <em>\"Tienes agallas, eso sí.\"</em> La cubierta del Viento Ciego huele a pólvora nueva. dos marineros con traza de mercenarios vigilan la escotilla de popa. Drace te tiende un vaso de aguardiente sin preguntar nada. Solo espera.",
+      "choices": [
+        { "key": "A", "text": "Pedirle pasaje discreto a Isla Negra", "nextNodeId": null },
+        { "key": "B", "text": "Preguntarle sobre el Almirante Kael", "nextNodeId": "el_nombre" },
+        { "key": "C", "text": "Ofrecerte como tripulante hasta Isla Negra", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "event", "who": "Capitan Drace", "description": "Respeta la audacia. Espera en silencio. Trato posible." },
+        { "type": "warning", "who": "Mercenarios en escotilla", "description": "No son marineros normales. Están armados y nerviosos." }
+      ],
+      "memoryKeys": ["drace_respeto", "mercenarios_bordo"]
+    },
+
+    "el_nombre": {
+      "label": "El Nombre",
+      "scene": "El vaso se detiene a mitad de camino. Los dos mercenarios de la escotilla intercambian una mirada rápida. Drace baja la voz: <em>\"Kael cerró mis rutas del norte hace siete meses. Decomisó dos barcos. Arruinó a mi familia.\"</em> Pausa. <em>\"Pero hay gente que paga bien por saber dónde está y cuándo mueve sus fichas. ¿Tú eres uno de esos?\"</em>",
+      "choices": [
+        { "key": "A", "text": "Confirmar que buscas a Kael y proponer alianza", "nextNodeId": "alianza" },
+        { "key": "B", "text": "Negar cualquier relación con Kael", "nextNodeId": null },
+        { "key": "C", "text": "Ofrecerle oro por su información ahora mismo", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "event", "who": "Capitan Drace", "description": "Arruinado por Kael. Motivos propios para traicionarlo." },
+        { "type": "mystery", "who": "Informacion de Kael", "description": "Drace tiene datos de movimientos. Fuente potencialmente valiosa." }
+      ],
+      "memoryKeys": ["drace_vs_kael", "drace_intel"]
+    },
+
+    "alianza": {
+      "label": "Alianza",
+      "scene": "Drace estrecha la mano con la firmeza de quien firma en sangre. Baja a su cabina de mapas. Sobre la mesa, una carta náutica con un círculo rojo alrededor de un archipiélago sin nombre. <em>\"Kael tiene aquí veinte barcos de guerra. Suficiente para tomar la capital si la flota real está dispersa en el sur.\"</em> Clava la vista en ti. <em>\"¿Sigues queriéndolo encontrar?\"</em>",
+      "choices": [
+        { "key": "A", "text": "Zarpar ya con Drace hacia el archipiélago", "nextNodeId": "alta_mar" },
+        { "key": "B", "text": "Pedir 48 horas para buscar refuerzos en la ciudad", "nextNodeId": null },
+        { "key": "C", "text": "Exigir prueba física de que la flota existe", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "event", "who": "Capitan Drace", "description": "Aliado formal. Zarpa en dos horas." },
+        { "type": "warning", "who": "Flota de Kael", "description": "20 barcos. Archipiélago sin nombre en carta oficial." },
+        { "type": "mystery", "who": "Carta manipulada", "description": "El archipiélago fue borrado de los registros de la Corona. Alguien con acceso lo hizo." }
+      ],
+      "memoryKeys": ["alianza_drace", "flota_kael", "archipielago_borrado"]
+    },
+
+    "alta_mar": {
+      "label": "Alta Mar",
+      "scene": "El viento llena las velas al atardecer. Al tercer día, un barco de vigía de Kael aparece en el horizonte y cambia el rumbo hacia vosotros. Drace ordena izar una bandera de mercante neutral. <em>\"Si nos abordan, eres mi cocinero. Un cocinero mudo, si puedes.\"</em> El barco enemigo se acerca. Ocho cañones apuntando.",
+      "choices": [
+        { "key": "A", "text": "Mantener la tapadera de cocinero", "nextNodeId": null },
+        { "key": "B", "text": "Disparar primero y escapar", "nextNodeId": null },
+        { "key": "C", "text": "Rendirse y usar la captura como acceso al archipiélago", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "enemy", "who": "Barco vigia de Kael", "description": "8 cañones. Abordaje inminente si no se convencen." },
+        { "type": "event", "who": "Bandera neutral", "description": "Tapadera activada. Todo depende de que la historia se sostenga." }
+      ],
+      "memoryKeys": ["interceptados", "tapadera_mercante"]
+    },
+
+    "bodega": {
+      "label": "Bodega",
+      "scene": "Cedro húmedo y olor a salitre. Entre los barriles de pólvora encuentras algo que no esperabas: tres hombres con uniformes desgarrados de oficiales navales de la Corona, encadenados a la quilla. Uno te reconoce —sus ojos se abren de par en par— y mueve la cabeza hacia la escotilla con urgencia. Pasos en cubierta. Alguien baja.",
+      "choices": [
+        { "key": "A", "text": "Esconderte detrás de los barriles de pólvora", "nextNodeId": "escondido" },
+        { "key": "B", "text": "Cortar la mordaza al oficial que te reconoció", "nextNodeId": "cdr_veris" },
+        { "key": "C", "text": "Sacar el cuchillo y esperar al que baja", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "enemy", "who": "Prisioneros navales", "description": "Tres oficiales de la Corona encadenados en bodega de barco mercante." },
+        { "type": "warning", "who": "Escotilla", "description": "Alguien baja ahora. Cinco segundos para esconderte o actuar." }
+      ],
+      "memoryKeys": ["prisioneros_bodega", "oficial_reconcio"]
+    },
+
+    "cdr_veris": {
+      "label": "Cdr. Veris",
+      "scene": "Jadea. Susurro urgente y preciso: <em>\"Comandante Veris, Flota del Norte. Este barco lleva armas al Archipiélago de las Almas bajo órdenes del Almirante Kael. Si la Flota Real no llega allí antes del amanecer de pasado mañana, los rebeldes tienen suficiente para tomar el Estrecho del Rey.\"</em> Los pasos se detienen sobre vuestra cabeza.",
+      "choices": [
+        { "key": "A", "text": "Liberar a Veris y los tres oficiales ahora", "nextNodeId": "motin" },
+        { "key": "B", "text": "Pedirle que espere — necesitas más información", "nextNodeId": null },
+        { "key": "C", "text": "Usar la info para negociar con Drace", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "event", "who": "Cdr. Veris", "description": "Drace es agente de Kael. Las armas en bodega son para la flota rebelde." },
+        { "type": "warning", "who": "Plazo", "description": "Pasado mañana al amanecer. Horas contadas para avisar a la Flota Real." },
+        { "type": "mystery", "who": "Archipielago de las Almas", "description": "La misma ubicación sin nombre de la carta de Drace. Base de Kael." }
+      ],
+      "memoryKeys": ["drace_agente_kael", "plazo_critico", "mismo_archipielago"]
+    },
+
+    "motin": {
+      "label": "Motin",
+      "scene": "Las cadenas ceden. Veris se pone en pie con dificultad pero con determinación en los ojos. Con cuatro personas tienes opciones que no tenías antes. Cuenta los pasos sobre vuestra cabeza: tres guardias en cubierta, Drace en el puente. <em>\"Necesitamos el timón y el libro de señales,\"</em> dice Veris en voz muy baja. <em>\"El resto es fuerza bruta.\"</em>",
+      "choices": [
+        { "key": "A", "text": "Subir por la escotilla de proa en silencio", "nextNodeId": null },
+        { "key": "B", "text": "Crear distracción incendiando un barril pequeño", "nextNodeId": null },
+        { "key": "C", "text": "Enviar a Veris arriba mientras tú retienes la escotilla", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "event", "who": "Cdr. Veris", "description": "Operativo. Objetivo: timón y libro de señales para enviar aviso a la Flota Real." },
+        { "type": "warning", "who": "Guardia de cubierta", "description": "Tres en cubierta. Drace en el puente. Todos armados." }
+      ],
+      "memoryKeys": ["veris_libre", "motin_activo"]
+    },
+
+    "escondido": {
+      "label": "Escondido",
+      "scene": "Te aplastas entre dos barriles. Un marinero de cuello ancho baja con un farol, revisa el inventario durante tres minutos eternos y vuelve a subir sin mirarte. Cuando el silencio vuelve, el oficial que te reconoció te mira con los ojos muy abiertos y señala su oído con el mentón: <em>están escuchando arriba.</em>",
+      "choices": [
+        { "key": "A", "text": "Esperar a que anochezca para actuar", "nextNodeId": null },
+        { "key": "B", "text": "Cortar la mordaza del oficial ahora mismo", "nextNodeId": "cdr_veris" },
+        { "key": "C", "text": "Intentar escapar del barco antes de que zarpe", "nextNodeId": null }
+      ],
+      "events": [
+        { "type": "event", "who": "Marinero", "description": "Revisión de inventario rutinaria. No te vio. Pero volverá." },
+        { "type": "mystery", "who": "Oficial prisionero", "description": "Señala hacia arriba. Hay alguien escuchando en el sollado." }
+      ],
+      "memoryKeys": ["no_detectado", "espias_arriba"]
+    }
+  }
+}

@@ -2,7 +2,7 @@
   <div class="choices-hd">Decisiones — <span class="a">arrastra al árbol</span></div>
   <div class="choices-stack">
     @if (choices().length === 0) {
-      <p style="font-family:var(--f-mono);font-size:.6rem;color:var(--ink4);padding:4px 0">
+      <p style="font-family: var(--f-mono); font-size: 0.6rem; color: var(--ink4); padding: 4px 0">
         Fin de esta rama.
       </p>
     } @else {
@@ -12,8 +12,8 @@
           tabindex="0"
           [attr.data-choice]="choice.text"
           [attr.aria-label]="'Opcion ' + choice.key + ': ' + choice.text"
-          (mousedown)="onChoiceMouseDown($event, choice.text)"
-          (keydown)="onChoiceKeyDown($event, choice.text)"
+          [class.cc-disabled]="!choice.nextNodeId"
+          (mousedown)="onChoiceMouseDown($event, choice)"
         >
           <span class="cck">{{ choice.key }}</span>
           <span class="cctxt">{{ choice.text }}</span>

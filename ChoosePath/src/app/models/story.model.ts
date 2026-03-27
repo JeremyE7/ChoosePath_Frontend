@@ -10,6 +10,7 @@
 export interface Choice {
   key: string;           // Letter key: 'A', 'B', 'C'
   text: string;          // Full choice text
+  nextNodeId: string | null;  // Template node to create (null = not yet written)
 }
 
 /**
@@ -71,6 +72,27 @@ export interface StoryStats {
   nodeCount: number;     // Total nodes created
   maxDepth: number;     // Deepest level reached
   branchCount: number;  // Total choices made
+}
+
+/**
+ * A node template as stored in the story JSON.
+ * Does not include runtime fields (id, childIds) which are managed by StoryService.
+ */
+export interface StoryNodeTemplate {
+  label: string;
+  scene: string;
+  choices: Choice[];
+  events: EventItem[];
+  memoryKeys: string[];
+}
+
+/**
+ * Complete story data structure loaded from JSON/API.
+ */
+export interface StoryData {
+  title: string;
+  rootNodeId: string;
+  nodes: Record<string, StoryNodeTemplate>;
 }
 
 /**

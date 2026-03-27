@@ -1,20 +1,18 @@
-import { Component, input, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-
-export interface MemoryNotification {
-  who: string;
-  txt: string;
-}
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { MemoryService } from '../../services/memory.service';
 
 @Component({
   selector: 'app-memory-notification',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
   templateUrl: './memory-notification.component.html',
   styleUrls: ['./memory-notification.component.css'],
 })
 export class MemoryNotificationComponent {
-  // Use input() for reactive inputs
-  notifications = input.required<MemoryNotification[]>();
+  private readonly memoryService = inject(MemoryService);
+
+  /** First item in queue — the one currently on screen */
+  readonly current = computed(() => this.memoryService.notificationQueue()[0] ?? null);
+
+  /** True while showing, false while playing exit animation */
+  readonly isVisible = this.memoryService.showingNotification;
 }

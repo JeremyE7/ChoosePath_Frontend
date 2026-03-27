@@ -1,58 +1,52 @@
 /**
  * StoryService - Manages story state, tree layout, and navigation
- * 
+ *
  * Responsibilities:
- * - Hold all story nodes in memory
+ * - Load story data via StoryDataService
+ * - Hold all active story nodes in memory
  * - Track current node position
  * - Calculate tree layout positions
  * - Handle node navigation and choice commits
  * - Manage zoom/viewbox state
- * 
- * State (signals):
- * - nodes: Record of all story nodes
- * - currentNodeId: ID of currently active node
- * - nodePositions: SVG coordinates for each node
- * - viewBox: Current viewport settings
- * - stats: node count, depth, branches
  */
-import { Injectable, signal, computed } from '@angular/core';
-import { 
-  StoryNode, 
-  NodePosition, 
-  ViewBox, 
-  DEPTH_COLORS, 
-  TREE_CONFIG 
+import { Injectable, inject, signal, computed } from '@angular/core';
+import {
+  StoryNode,
+  StoryData,
+  StoryNodeTemplate,
+  NodePosition,
+  ViewBox,
+  DEPTH_COLORS,
+  TREE_CONFIG,
 } from '../models/story.model';
-import { STORY_NODES, createRootNode, CHOICE_DATABASE } from '../data/story-data';
+import { StoryDataService } from './story-data.service';
+
+const DEFAULT_VIEWBOX: ViewBox = { x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 };
 
 @Injectable({ providedIn: 'root' })
 export class StoryService {
-  
+  private readonly storyDataService = inject(StoryDataService);
+
+  /** Loaded story templates (the "database" of available nodes) */
+  private storyData: StoryData | null = null;
+
   // ==========================================================================
   // STATE SIGNALS
   // ==========================================================================
-  
-  /** All story nodes indexed by ID */
+
   private readonly _nodes = signal<Record<string, StoryNode>>({});
-  
-  /** Currently active node ID */
   private readonly _currentNodeId = signal<string>('root');
-  
-  /** SVG positions for each node */
   private readonly _nodePositions = signal<Record<string, NodePosition>>({});
-  
-  /** SVG viewBox configuration */
-  private readonly _viewBox = signal<ViewBox>({ x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 });
-  
-  /** Story statistics */
+  private readonly _viewBox = signal<ViewBox>({ ...DEFAULT_VIEWBOX });
   private readonly _nodeCount = signal<number>(1);
   private readonly _maxDepth = signal<number>(0);
   private readonly _branchCount = signal<number>(0);
+  private readonly _loaded = signal<boolean>(false);
 
   // ==========================================================================
   // PUBLIC READONLY SIGNALS
   // ==========================================================================
-  
+
   readonly nodes = this._nodes.asReadonly();
   readonly currentNodeId = this._currentNodeId.asReadonly();
   readonly nodePositions = this._nodePositions.asReadonly();
@@ -60,31 +54,44 @@ export class StoryService {
   readonly nodeCount = this._nodeCount.asReadonly();
   readonly maxDepth = this._maxDepth.asReadonly();
   readonly branchCount = this._branchCount.asReadonly();
+  readonly loaded = this._loaded.asReadonly();
 
   // ==========================================================================
   // COMPUTED VALUES
   // ==========================================================================
-  
-  /** Get the current active node */
+
   readonly currentNode = computed(() => this._nodes()[this._currentNodeId()]);
-  
-  /** Get label of current node for breadcrumb display */
   readonly currentLabel = computed(() => this.currentNode()?.label ?? '');
-  
-  /** Get current scene text with memory echoes injected */
-  readonly currentScene = computed(() => {
-    const node = this.currentNode();
-    return node?.scene ?? '';
-  });
+  readonly currentScene = computed(() => this.currentNode()?.scene ?? '');
 
   // ==========================================================================
   // INITIALIZATION
   // ==========================================================================
-  
-  /** Initialize the story with root node */
-  initStory(): void {
-    const root = createRootNode();
-    this._nodes.set({ root: root });
+
+  /**
+   * Load and initialize a story by its slug.
+   * Fetches the JSON via StoryDataService, then builds the root node.
+   */
+  loadStory(storyId: string): void {
+    this.storyDataService.loadStory(storyId).subscribe({
+      next: (data) => {
+        this.storyData = data;
+        this._initFromLoadedData();
+        this._loaded.set(true);
+      },
+      error: (err) => console.error('Failed to load story:', err),
+    });
+  }
+
+  /** Build the root node from loaded story data */
+  private _initFromLoadedData(): void {
+    if (!this.storyData) return;
+
+    const rootTemplate = this.storyData.nodes[this.storyData.rootNodeId];
+    if (!rootTemplate) return;
+
+    const rootNode = this._templateToNode('root', rootTemplate);
+    this._nodes.set({ root: rootNode });
     this._currentNodeId.set('root');
     this._recalculateTreeLayout();
   }
@@ -96,122 +103,111 @@ export class StoryService {
     this._maxDepth.set(0);
     this._branchCount.set(0);
     this._nodePositions.set({});
-    this.initStory();
+    this._viewBox.set({ ...DEFAULT_VIEWBOX });
+    this._initFromLoadedData();
   }
 
   // ==========================================================================
   // NAVIGATION
   // ==========================================================================
-  
-  /**
-   * Navigate to an existing node in the tree
-   * Used when clicking on visited nodes
-   */
+
   navigateToNode(nodeId: string): void {
-    const node = this._nodes()[nodeId];
-    if (!node) return;
-    
+    if (!this._nodes()[nodeId]) return;
     this._currentNodeId.set(nodeId);
     this._centerViewOnNode(nodeId);
   }
 
+  navTo(nodeId: string): void {
+    this.navigateToNode(nodeId);
+  }
+
+  // ==========================================================================
+  // COMMIT CHOICE
+  // ==========================================================================
+
   /**
-   * Commit a choice and create new node
-   * Called when player drags choice to tree or presses Enter
+   * Commit a choice by its nextNodeId.
+   * Looks up the node template in the loaded story data and creates a runtime node.
    */
-  commitChoice(choiceText: string): string {
+  commitChoice(nextNodeId: string): string {
     const parent = this.currentNode();
-    if (!parent) return '';
+    if (!parent || !this.storyData) return '';
 
-    // Look up choice data from database
-    const choiceData = CHOICE_DATABASE[choiceText];
-    
-    // Generate new node ID
+    const template = this.storyData.nodes[nextNodeId];
+    if (!template) return '';
+
     const newId = 'n' + (this._nodeCount() + 1);
-    
-    // Calculate new node depth by traversing up to root
-    const parentDepth = this._calculateDepth(parent.id);
-    const newDepth = parentDepth + 1;
+    const newNode = this._templateToNode(newId, template);
 
-    // Create new node
-    const newNode: StoryNode = {
-      id: newId,
-      label: choiceData?.label ?? choiceText.slice(0, 13),
-      scene: choiceData?.scene ?? `Eliges: <em>${choiceText}</em>.`,
-      choices: choiceData?.choices ?? [],
-      events: choiceData?.events ?? [],
-      memoryKeys: choiceData?.memoryKeys ?? [],
-      childIds: [],
-    };
-
-    // Update nodes record
+    // Add new node to the tree
     this._nodes.update(nodes => ({ ...nodes, [newId]: newNode }));
-    
-    // Add child reference to parent
+
+    // Link child to parent
     const updatedParent = { ...parent, childIds: [...parent.childIds, newId] };
     this._nodes.update(nodes => ({ ...nodes, [parent.id]: updatedParent }));
 
-    // Update statistics
+    // Update stats
     this._nodeCount.update(c => c + 1);
     this._branchCount.update(b => b + 1);
     this._maxDepth.update(d => Math.max(d, this._calculateDepth(newId)));
 
-    // Set as current node
     this._currentNodeId.set(newId);
-
-    // Recalculate all node positions
     this._recalculateTreeLayout();
 
     return newId;
   }
 
   // ==========================================================================
+  // HELPERS
+  // ==========================================================================
+
+  /** Convert a JSON template into a runtime StoryNode */
+  private _templateToNode(id: string, template: StoryNodeTemplate): StoryNode {
+    return {
+      id,
+      label: template.label,
+      scene: template.scene,
+      choices: template.choices,
+      events: template.events,
+      memoryKeys: template.memoryKeys,
+      childIds: [],
+    };
+  }
+
+  // ==========================================================================
   // TREE LAYOUT CALCULATION
   // ==========================================================================
-  
-  /**
-   * Calculate SVG positions for all nodes using depth-first layout
-   * Positions root at top center, children below with spacing
-   */
+
   private _recalculateTreeLayout(): void {
     const nodes = this._nodes();
     const newPositions: Record<string, NodePosition> = {};
-    
-    // Calculate position for root node
-    const rootNode = nodes['root'];
-    if (rootNode) {
+
+    if (nodes['root']) {
       this._layoutNodeRecursive('root', TREE_CONFIG.rootX, TREE_CONFIG.rootY, 0, nodes, newPositions);
     }
-    
+
     this._nodePositions.set(newPositions);
   }
 
-  /**
-   * Recursively calculate positions for a node and its children
-   */
   private _layoutNodeRecursive(
     nodeId: string,
     x: number,
     y: number,
     depth: number,
     nodes: Record<string, StoryNode>,
-    positions: Record<string, NodePosition>
+    positions: Record<string, NodePosition>,
   ): void {
     const node = nodes[nodeId];
     if (!node) return;
 
-    // Store position for this node
     positions[nodeId] = { x, y };
 
     const children = node.childIds;
     if (children.length === 0) return;
 
-    // Calculate horizontal spread for children
-    const childCount = children.length;
-    const totalWidth = childCount * TREE_CONFIG.nodeWidth + (childCount - 1) * TREE_CONFIG.horizontalGap;
+    const totalWidth = children.length * TREE_CONFIG.nodeWidth + (children.length - 1) * TREE_CONFIG.horizontalGap;
     const startX = x + TREE_CONFIG.nodeWidth / 2 - totalWidth / 2;
 
-    // Position each child below the parent
     children.forEach((childId, index) => {
       const childX = startX + index * (TREE_CONFIG.nodeWidth + TREE_CONFIG.horizontalGap);
       const childY = y + TREE_CONFIG.nodeHeight + TREE_CONFIG.verticalGap;
@@ -219,25 +215,16 @@ export class StoryService {
     });
   }
 
-  /**
-   * Get the parent node ID for a given node
-   */
   findParentNode(childId: string): string | null {
     const nodes = this._nodes();
     for (const [parentId, parent] of Object.entries(nodes)) {
-      if (parent.childIds.includes(childId)) {
-        return parentId;
-      }
+      if (parent.childIds.includes(childId)) return parentId;
     }
     return null;
   }
 
-  /**
-   * Check if ancestorId is an ancestor of nodeId in the tree
-   */
   isAncestor(ancestorId: string, nodeId: string): boolean {
     if (ancestorId === nodeId) return true;
-    
     let current = nodeId;
     while (current) {
       const parent = this.findParentNode(current);
@@ -247,36 +234,23 @@ export class StoryService {
     return false;
   }
 
-  /**
-   * Check if a node is on the path from root to current node
-   */
   isOnCurrentPath(nodeId: string): boolean {
     return this.isAncestor(nodeId, this._currentNodeId());
   }
 
-  /**
-   * Calculate the depth of a node by traversing up to root
-   * Root node has depth 0
-   */
   private _calculateDepth(nodeId: string): number {
     if (nodeId === 'root') return 0;
-    
     let depth = 0;
     let current = nodeId;
-    
     while (current !== 'root') {
       const parent = this.findParentNode(current);
       if (!parent) break;
       depth++;
       current = parent;
     }
-    
     return depth;
   }
 
-  /**
-   * Get the depth of a specific node (public accessor)
-   */
   getNodeDepth(nodeId: string): number {
     return this._calculateDepth(nodeId);
   }
@@ -284,8 +258,15 @@ export class StoryService {
   // ==========================================================================
   // ZOOM AND PAN
   // ==========================================================================
-  
-  /** Zoom in by shrinking viewBox */
+
+  /**
+   * Pan the viewBox by a delta in SVG coordinate units.
+   * dx/dy are already in SVG space (converted by the canvas component).
+   */
+  panViewBox(dx: number, dy: number): void {
+    this._viewBox.update(v => ({ ...v, x: v.x + dx, y: v.y + dy }));
+  }
+
   zoomIn(): void {
     this._viewBox.update(vb => ({
       x: vb.x + vb.w * 0.1,
@@ -297,7 +278,6 @@ export class StoryService {
     }));
   }
 
-  /** Zoom out by expanding viewBox */
   zoomOut(): void {
     this._viewBox.update(vb => ({
       x: vb.x - vb.w * 0.12,
@@ -309,12 +289,10 @@ export class StoryService {
     }));
   }
 
-  /** Reset zoom to default view */
   resetZoom(): void {
-    this._viewBox.set({ x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 });
+    this._viewBox.set({ ...DEFAULT_VIEWBOX });
   }
 
-  /** Center view on a specific node */
   private _centerViewOnNode(nodeId: string): void {
     const position = this._nodePositions()[nodeId];
     if (!position) return;
@@ -326,43 +304,27 @@ export class StoryService {
     this._viewBox.update(v => ({ ...v, x: centerX, y: centerY }));
   }
 
-  /** Center view on current node */
   centerOnCurrentNode(): void {
     this._centerViewOnNode(this._currentNodeId());
   }
 
-  /**
-   * Center view on a specific node by ID
-   * Alias for external callers
-   */
   centerOn(nodeId: string): void {
     this._centerViewOnNode(nodeId);
   }
 
-  /**
-   * Navigate to a node - alias for navigateToNode
-   * Compatibility method
-   */
-  navTo(nodeId: string): void {
-    this.navigateToNode(nodeId);
-  }
-
-  /** Get viewBox as SVG string */
   getViewBoxString(): string {
     const vb = this._viewBox();
     return `${vb.x} ${vb.y} ${vb.w} ${vb.h}`;
   }
 
   // ==========================================================================
-  // VIEW MODEL HELPERS FOR COMPONENTS
+  // VIEW MODEL HELPERS
   // ==========================================================================
-  
-  /** Get color scheme for node depth */
+
   getColorsForDepth(depth: number) {
     return DEPTH_COLORS[depth % DEPTH_COLORS.length];
   }
 
-  /** Get all tree edges for SVG rendering */
   getTreeEdges(): Array<{
     id: string;
     fromX: number;
@@ -373,7 +335,6 @@ export class StoryService {
   }> {
     const nodes = this._nodes();
     const positions = this._nodePositions();
-    const currentId = this._currentNodeId();
     const edges: Array<{
       id: string;
       fromX: number;

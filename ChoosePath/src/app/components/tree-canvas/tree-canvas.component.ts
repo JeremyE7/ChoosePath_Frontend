@@ -2,6 +2,7 @@ import {
   Component,
   input,
   output,
+  signal,
   ChangeDetectionStrategy,
   ElementRef,
   ViewChild,
@@ -38,16 +39,15 @@ export interface TreeEdge {
 
 @Component({
   selector: 'app-tree-canvas',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   templateUrl: './tree-canvas.component.html',
   styleUrls: ['./tree-canvas.component.css'],
+  host: { '[class.panning]': 'isPanning()' },
 })
 export class TreeCanvasComponent {
   @ViewChild('treeCanvas') treeCanvasRef!: ElementRef<HTMLElement>;
 
-  // Use input() for reactive inputs
   treeNodes = input.required<TreeNode[]>();
   treeEdges = input.required<TreeEdge[]>();
   viewBoxString = input.required<string>();
@@ -55,11 +55,55 @@ export class TreeCanvasComponent {
   currentNodeChildren = input.required<string[]>();
   ghostStubPaths = input.required<string[]>();
 
-  // Outputs
   nodeClick = output<string>();
+  /** Emits pan delta in SVG coordinate units */
+  pan = output<{ dx: number; dy: number }>();
+
+  readonly isPanning = signal(false);
+
+  private _lastX = 0;
+  private _lastY = 0;
 
   onNodeClick(nodeId: string): void {
     this.nodeClick.emit(nodeId);
+  }
+
+  onSvgMouseDown(e: MouseEvent): void {
+    // Only left-click, and not on an interactive node
+    if (e.button !== 0) return;
+    if ((e.target as Element).closest('.tree-node')) return;
+
+    e.preventDefault();
+    this._lastX = e.clientX;
+    this._lastY = e.clientY;
+    this.isPanning.set(true);
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const rect = this.treeCanvasRef.nativeElement.getBoundingClientRect();
+
+      // Parse current viewBox to get the SVG-to-pixel scale
+      const [, , vbW, vbH] = this.viewBoxString().split(' ').map(Number);
+      const scaleX = vbW / rect.width;
+      const scaleY = vbH / rect.height;
+
+      // Dragging right → content moves right → viewBox shifts left (dx is negative)
+      const dx = (moveEvent.clientX - this._lastX) * scaleX * -1;
+      const dy = (moveEvent.clientY - this._lastY) * scaleY * -1;
+
+      this._lastX = moveEvent.clientX;
+      this._lastY = moveEvent.clientY;
+
+      this.pan.emit({ dx, dy });
+    };
+
+    const onMouseUp = () => {
+      this.isPanning.set(false);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   }
 
   getCanvasElement(): ElementRef<HTMLElement> {

@@ -15,13 +15,14 @@ import {
 import { CommonModule } from '@angular/common';
 import { StoryService } from './services/story.service';
 import { MemoryService } from './services/memory.service';
+import { Choice } from './models/story.model';
 
 // Components
 import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { TreeCanvasComponent } from './components/tree-canvas/tree-canvas.component';
 import { NarrativePanelComponent } from './components/narrative-panel/narrative-panel.component';
-import { ChoicePanelComponent, Choice } from './components/choice-panel/choice-panel.component';
+import { ChoicePanelComponent } from './components/choice-panel/choice-panel.component';
 import { MemoryNotificationComponent } from './components/memory-notification/memory-notification.component';
 import { ToastComponent } from './components/toast/toast.component';
 
@@ -51,7 +52,7 @@ export class App implements OnInit {
 
   // Drag state
   private _isDragging = false;
-  private _dragChoice = '';
+  private _dragChoice: Choice | null = null;
   private _dragStartX = 0;
   private _dragStartY = 0;
   private _dragMoved = false;
@@ -82,8 +83,6 @@ export class App implements OnInit {
   // Hint
   readonly hintVisible = signal(true);
 
-  // Notifications
-  readonly notifications = this.memoryService.notificationQueue;
 
   // ==========================================================================
   // COMPUTED VALUES
@@ -95,7 +94,7 @@ export class App implements OnInit {
 
   readonly currentNodeChoices = computed<Choice[]>(() => {
     const node = this.currentNode();
-    return (node?.choices || []).map((c) => ({ key: c.key, text: c.text }));
+    return node?.choices || [];
   });
 
   readonly currentNodeChildren = computed(() => {
@@ -255,7 +254,7 @@ export class App implements OnInit {
   // ==========================================================================
 
   ngOnInit(): void {
-    this.storyService.initStory();
+    this.storyService.loadStory('el-galeon-de-la-niebla');
   }
 
   // ==========================================================================
@@ -274,6 +273,10 @@ export class App implements OnInit {
     this.storyService.resetZoom();
   }
 
+  onCanvasPan(delta: { dx: number; dy: number }): void {
+    this.storyService.panViewBox(delta.dx, delta.dy);
+  }
+
   onNodeClick(nodeId: string): void {
     const node = this.storyService.nodes()[nodeId];
     if (node && node.id !== this.storyService.currentNodeId() && (node.childIds || []).length > 0) {
@@ -281,20 +284,19 @@ export class App implements OnInit {
     }
   }
 
-  onChoiceDragStart(choiceText: string): void {
-    // Check if this is a keyboard-initiated "commit" (same text twice quickly)
-    if (this._isDragging && this._dragChoice === choiceText && this._dragMoved) {
-      // This was a keyboard commit - process directly
-      this.commitChoice(choiceText);
+  onChoiceDragStart(choice: Choice): void {
+    // Check if this is a keyboard-initiated "commit" (same choice twice quickly)
+    if (this._isDragging && this._dragChoice?.nextNodeId === choice.nextNodeId && this._dragMoved) {
+      this.commitChoice(choice);
       return;
     }
 
     // Start drag operation
     this._isDragging = true;
-    this._dragChoice = choiceText;
+    this._dragChoice = choice;
     this._dragMoved = false;
     this._dragSnap = false;
-    this.ghostText.set(choiceText);
+    this.ghostText.set(choice.text);
     this.hintVisible.set(false);
 
     const onMouseMove = (e: MouseEvent) => {
@@ -371,7 +373,7 @@ export class App implements OnInit {
       this._isDragging = false;
 
       // Check if we should commit: moved and either snapped or released over canvas
-      if (this._dragMoved && (this._dragSnap || isOverCanvas)) {
+      if (this._dragMoved && this._dragSnap && this._dragChoice) {
         this.commitChoice(this._dragChoice);
       }
     };
@@ -391,8 +393,11 @@ export class App implements OnInit {
     document.addEventListener('mousedown', startDrag);
   }
 
-  private commitChoice(choiceText: string): void {
-    const newId = this.storyService.commitChoice(choiceText);
+  private commitChoice(choice: Choice): void {
+    if (!choice.nextNodeId) return;
+
+    const newId = this.storyService.commitChoice(choice.nextNodeId);
+    if (!newId) return;
 
     const node = this.storyService.nodes()[newId];
     if (node) {

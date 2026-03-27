@@ -5,6 +5,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1; /* fill the host flex container set in app.css */
+  min-height: 0;
 }
 .sb-hd {
   padding: 12px 14px 10px;
@@ -12,6 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 .sb-lbl {
   font-family: var(--f-mono);
@@ -31,7 +34,8 @@
   border: 1px solid rgba(74, 124, 247, 0.2);
 }
 .sb-list {
-  flex: 1;
+  flex-shrink: 0;
+  max-height: 40vh;
   overflow-y: auto;
   padding: 6px;
 }
@@ -41,7 +45,10 @@
   border-radius: var(--r-md);
   border: 1px solid transparent;
   margin-bottom: 2px;
-  transition: background 0.12s, border-color 0.15s, transform 0.18s var(--ease-spring);
+  transition:
+    background 0.12s,
+    border-color 0.15s,
+    transform 0.18s var(--ease-spring);
 }
 .sb-row:hover {
   background: rgba(255, 255, 255, 0.6);
@@ -90,8 +97,8 @@
 }
 .mem-log {
   border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  max-height: 148px;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px;
   background: rgba(255, 255, 255, 0.3);
@@ -143,6 +150,7 @@
   border-top: 1px solid var(--border);
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 .sb-btn {
   flex: 1;

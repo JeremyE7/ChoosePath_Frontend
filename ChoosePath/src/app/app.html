@@ -51,6 +51,7 @@
       [currentNodeChildren]="currentNodeChildren()"
       [ghostStubPaths]="ghostStubPaths()"
       (nodeClick)="onNodeClick($event)"
+      (pan)="onCanvasPan($event)"
     ></app-tree-canvas>
   </div>
 
@@ -73,7 +74,7 @@
 </div>
 
 <!-- Memory Notifications -->
-<app-memory-notification [notifications]="notifications()"></app-memory-notification>
+<app-memory-notification></app-memory-notification>
 
 <!-- Ghost for drag preview -->
 <div

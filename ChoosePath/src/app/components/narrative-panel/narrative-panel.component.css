@@ -5,6 +5,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 .rp-hd {
   padding: 10px 14px 8px;

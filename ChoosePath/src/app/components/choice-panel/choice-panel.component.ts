@@ -1,38 +1,25 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Choice } from '../../models/story.model';
 
-export interface Choice {
-  key: string;
-  text: string;
-}
+export type { Choice };
 
 @Component({
   selector: 'app-choice-panel',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   templateUrl: './choice-panel.component.html',
   styleUrls: ['./choice-panel.component.css'],
 })
 export class ChoicePanelComponent {
-  // Use input() for reactive inputs
   choices = input.required<Choice[]>();
   hasMemory = input.required<(text: string) => boolean>();
 
-  // Emits when drag starts with the choice text
-  choiceDragStart = output<string>();
+  choiceDragStart = output<Choice>();
 
-  onChoiceMouseDown(e: MouseEvent, choiceText: string): void {
-    if (e.button !== 0) return;
+  onChoiceMouseDown(e: MouseEvent, choice: Choice): void {
+    if (e.button !== 0 || !choice.nextNodeId) return;
     e.preventDefault();
-    this.choiceDragStart.emit(choiceText);
-  }
-
-  onChoiceKeyDown(e: KeyboardEvent, choiceText: string): void {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      // Emit a special event to commit the choice directly
-      this.choiceDragStart.emit(choiceText);
-    }
+    this.choiceDragStart.emit(choice);
   }
 }

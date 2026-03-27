@@ -86,17 +86,22 @@ export class MemoryService {
 
   private processNotificationQueue(): void {
     if (this._showingNotification()) return;
-    
+
     const queue = this._notificationQueue();
     if (queue.length === 0) return;
 
     this._showingNotification.set(true);
-    
-    // Auto-hide after 4.2 seconds (from original: 4200)
+
     setTimeout(() => {
+      // 1. Trigger exit animation (removes .visible class)
       this._showingNotification.set(false);
-      this._notificationQueue.update(q => q.slice(1));
-      setTimeout(() => this.processNotificationQueue(), 500);
+
+      // 2. Remove from DOM only after exit animation finishes (~380ms)
+      setTimeout(() => {
+        this._notificationQueue.update(q => q.slice(1));
+        // 3. Small gap before showing the next one
+        setTimeout(() => this.processNotificationQueue(), 120);
+      }, 380);
     }, 4200);
   }
 

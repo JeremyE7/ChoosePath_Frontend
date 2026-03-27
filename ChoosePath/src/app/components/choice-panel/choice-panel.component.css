@@ -3,6 +3,8 @@
   padding: 10px;
   background: rgba(255, 255, 255, 0.35);
   flex-shrink: 0;
+  max-height: clamp(120px, 45vh, 360px);
+  overflow-y: auto;
 }
 .choices-hd {
   font-family: var(--f-mono);

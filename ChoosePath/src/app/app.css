@@ -146,6 +146,17 @@ body {
   overflow: hidden;
   position: relative;
   z-index: 1;
+  min-height: 0;
+}
+
+/* Make host elements fill their grid cell as flex columns */
+.shell > app-sidebar {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+.shell > .rp-wrap {
+  min-height: 0;
 }
 
 /* ════════════════════════════ CENTER: TREE */
@@ -243,6 +254,21 @@ body {
   overflow: hidden;
 }
 
+/* Narrative panel: capped height, scrolls internally */
+.rp-wrap app-narrative-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  max-height: clamp(180px, 55vh, 420px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Choice panel: natural size, never hidden */
+.rp-wrap app-choice-panel {
+  flex-shrink: 0;
+}
+
 /* ════════════════════════════ DRAG GHOST */
 #ghost {
   position: fixed;
@@ -279,5 +305,41 @@ body {
   }
   .aurora {
     animation: none;
+  }
+}
+
+/* ════════════════════════════ RESPONSIVE */
+@media (max-width: 1100px) {
+  .shell {
+    grid-template-columns: 180px 1fr 260px;
+  }
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 0px 1fr 240px;
+  }
+  .shell > app-sidebar {
+    display: none;
+  }
+  .rp-wrap app-narrative-panel {
+    max-height: clamp(160px, 45vh, 340px);
+  }
+}
+
+@media (max-width: 600px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+  .shell > app-sidebar {
+    display: none;
+  }
+  .rp-wrap {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  .rp-wrap app-narrative-panel {
+    max-height: 35vh;
   }
 }

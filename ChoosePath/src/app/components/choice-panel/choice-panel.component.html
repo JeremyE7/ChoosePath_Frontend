@@ -1,0 +1,45 @@
+<div class="choices-wrap">
+  <div class="choices-hd">Decisiones — <span class="a">arrastra al árbol</span></div>
+  <div class="choices-stack">
+    @if (choices().length === 0) {
+      <p style="font-family:var(--f-mono);font-size:.6rem;color:var(--ink4);padding:4px 0">
+        Fin de esta rama.
+      </p>
+    } @else {
+      @for (choice of choices(); track choice.text; let i = $index) {
+        <div
+          class="cc"
+          tabindex="0"
+          [attr.data-choice]="choice.text"
+          [attr.aria-label]="'Opcion ' + choice.key + ': ' + choice.text"
+          (mousedown)="onChoiceMouseDown($event, choice.text)"
+          (keydown)="onChoiceKeyDown($event, choice.text)"
+        >
+          <span class="cck">{{ choice.key }}</span>
+          <span class="cctxt">{{ choice.text }}</span>
+          @if (hasMemory()(choice.text)) {
+            <span class="cc-mem">memoria</span>
+          }
+          <svg
+            class="ccgrip"
+            aria-hidden="true"
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--ink3)"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          >
+            <circle cx="8" cy="5" r="1.2" />
+            <circle cx="16" cy="5" r="1.2" />
+            <circle cx="8" cy="12" r="1.2" />
+            <circle cx="16" cy="12" r="1.2" />
+            <circle cx="8" cy="19" r="1.2" />
+            <circle cx="16" cy="19" r="1.2" />
+          </svg>
+        </div>
+      }
+    }
+  </div>
+</div>

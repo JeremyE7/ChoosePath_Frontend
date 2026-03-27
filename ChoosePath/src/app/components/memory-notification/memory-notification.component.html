@@ -1,0 +1,25 @@
+<div id="mem-notif" aria-live="polite" aria-label="Nuevas memorias">
+  @for (notif of notifications(); track notif.who) {
+    <div class="mn">
+      <div class="mn-top">
+        <div class="mn-icon">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#4a7cf7"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4l3 3" />
+          </svg>
+        </div>
+        <div class="mn-who">{{ notif.who }}</div>
+      </div>
+      <div class="mn-txt">{{ notif.txt }}</div>
+      <div class="mn-tag">recordara esto</div>
+    </div>
+  }
+</div>

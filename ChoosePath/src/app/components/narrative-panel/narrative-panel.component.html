@@ -1,0 +1,98 @@
+<div class="rp">
+  <div class="rp-hd">
+    <span class="rp-lbl">Narrativa</span>
+    <div class="dprow">
+      @for (dp of depthPips(); track $index; let i = $index) {
+        <div class="dp" [class.done]="dp.done" [class.here]="dp.here"></div>
+      }
+    </div>
+  </div>
+
+  <div class="narr-scroll">
+    <div class="nloc">{{ currentLabel() }} - Profundidad {{ depth() }}</div>
+    <p class="nscene" [innerHTML]="currentScene()"></p>
+
+    <div class="ev-list">
+      @for (event of currentEvents(); track $index; let i = $index) {
+        <div class="ev-card" [class]="event.type">
+          <div class="ev-ico">
+            @switch (event.type) {
+              @case ('enemy') {
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--rose)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              }
+              @case ('event') {
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--blue)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4l3 3" />
+                </svg>
+              }
+              @case ('warning') {
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--amber)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <path d="M12 9v4M12 17h.01" />
+                </svg>
+              }
+              @case ('mystery') {
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--violet)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+                </svg>
+              }
+              @case ('memory') {
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--green)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 6v4l3 3" />
+                </svg>
+              }
+            }
+          </div>
+          <div>
+            <div class="ev-who">{{ event.who }}</div>
+            <div class="ev-txt">{{ event.description }}</div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

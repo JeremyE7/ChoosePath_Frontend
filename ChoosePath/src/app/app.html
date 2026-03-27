@@ -1,0 +1,90 @@
+<!-- Aurora background -->
+<div class="aurora" aria-hidden="true"></div>
+
+<!-- Header -->
+<app-header></app-header>
+
+<!-- Shell -->
+<div class="shell">
+  <!-- Sidebar -->
+  <app-sidebar
+    [memoryLogEntries]="memoryLogEntries()"
+    [memoryCount]="memoryCount()"
+    (reset)="onReset()"
+    (export)="onExport()"
+  ></app-sidebar>
+
+  <!-- Center: Tree Canvas -->
+  <div class="center">
+    <div class="tree-bar">
+      <div class="bc">
+        <span class="bci">El Galeón</span>
+        <span class="bcsep">›</span>
+        <span class="bci cur">{{ currentLabel() }}</span>
+      </div>
+      <div class="tstats">
+        <div class="tst">
+          <span class="tst-v">{{ nodeCount() }}</span>
+          <span class="tst-l">Nodos</span>
+        </div>
+        <div class="tst">
+          <span class="tst-v">{{ maxDepth() }}</span>
+          <span class="tst-l">Prof.</span>
+        </div>
+        <div class="tst">
+          <span class="tst-v">{{ branches() }}</span>
+          <span class="tst-l">Ramas</span>
+        </div>
+      </div>
+      <div class="zbtns">
+        <button class="zb" (click)="onZoomIn()">+</button>
+        <button class="zb" (click)="onZoomOut()">−</button>
+        <button class="zb" style="font-size:.46rem" (click)="onZoomFit()">fit</button>
+      </div>
+    </div>
+
+    <app-tree-canvas
+      [treeNodes]="treeNodes()"
+      [treeEdges]="treeEdges()"
+      [viewBoxString]="viewBoxString()"
+      [hintVisible]="hintVisible()"
+      [currentNodeChildren]="currentNodeChildren()"
+      [ghostStubPaths]="ghostStubPaths()"
+      (nodeClick)="onNodeClick($event)"
+    ></app-tree-canvas>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="rp-wrap">
+    <app-narrative-panel
+      [currentLabel]="currentLabel()"
+      [currentScene]="currentScene()"
+      [currentEvents]="currentEvents()"
+      [depthPips]="depthPips()"
+      [depth]="maxDepth()"
+    ></app-narrative-panel>
+
+    <app-choice-panel
+      [choices]="currentNodeChoices()"
+      [hasMemory]="hasMemoryFn"
+      (choiceDragStart)="onChoiceDragStart($event)"
+    ></app-choice-panel>
+  </div>
+</div>
+
+<!-- Memory Notifications -->
+<app-memory-notification [notifications]="notifications()"></app-memory-notification>
+
+<!-- Ghost for drag preview -->
+<div
+  id="ghost"
+  [class.snap]="ghostSnap()"
+  [style.display]="ghostVisible() ? 'block' : 'none'"
+  [style.left.px]="ghostPosition().x"
+  [style.top.px]="ghostPosition().y"
+>
+  {{ ghostText() }}
+</div>
+
+<!-- Toast -->
+<app-toast [visible]="toastVisible()" [message]="toastMessage()"></app-toast>

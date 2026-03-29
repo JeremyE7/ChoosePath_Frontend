@@ -11,6 +11,7 @@ export interface Choice {
   key: string;           // Letter key: 'A', 'B', 'C'
   text: string;          // Full choice text
   nextNodeId: string | null;  // Template node to create (null = not yet written)
+  deadly?: boolean;      // Whether this choice leads to death
 }
 
 /**
@@ -33,6 +34,7 @@ export interface StoryNode {
   events: EventItem[];   // Events that occurred at this node
   memoryKeys: string[];   // Keys for memories triggered by this node
   childIds: string[];    // IDs of child nodes (created after choice)
+  isDeath?: boolean;     // Whether this node is a death scene (game over)
 }
 
 /**
@@ -84,6 +86,15 @@ export interface StoryNodeTemplate {
   choices: Choice[];
   events: EventItem[];
   memoryKeys: string[];
+  isDeath?: boolean;
+}
+
+export interface ScoreEntry {
+  _id?: string;
+  nickname: string;
+  score: number;
+  storyTitle: string;
+  date: string;
 }
 
 /**

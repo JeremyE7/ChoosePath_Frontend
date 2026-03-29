@@ -1,7 +1,7 @@
 /**
  * Express router for story generation endpoints.
  *
- * All three routes call Ollama's HTTP API at http://localhost:11434/api/chat
+ * All three routes call the Gemini API (generativelanguage.googleapis.com)
  * using plain fetch (Node.js 18+ built-in).
  *
  * Routes:
@@ -26,8 +26,8 @@ import type {
   ContinueResponse,
   RegenerateRequest,
   RegenerateResponse,
-  OllamaChatRequest,
-  OllamaChatResponse,
+  GeminiRequest,
+  GeminiResponse,
 } from './story.types.js';
 import { environment } from '../environments/environment.js';
 
@@ -37,54 +37,39 @@ export const storyRouter = Router();
 // Config
 // ─────────────────────────────────────────────────────────────────────────────
 
-const OLLAMA_URL = environment.ollamaUrl ?? 'http://localhost:11434';
-const OLLAMA_MODEL = environment.ollamaModel ?? 'llama3.1';
+const GEMINI_URL = environment.geminiUrl;
+const GEMINI_KEY = environment.geminiKey;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared Ollama helper
+// Shared Gemini helper
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function callOllama(systemPrompt: string, userPrompt: string): Promise<unknown> {
-  const body: OllamaChatRequest = {
-    model: OLLAMA_MODEL,
-    stream: false,
-    format: 'json',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    options: {
+async function callGemini(systemPrompt: string, userPrompt: string): Promise<unknown> {
+  const body: GeminiRequest = {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: {
       temperature: 0.85,
-      top_p: 0.92,
-      num_predict: 4096,
+      topP: 0.92,
+      maxOutputTokens: 32768,
+      responseMimeType: 'application/json',
     },
   };
-  console.log("llamando a ollama", OLLAMA_URL)
-  const response = await fetch(`${OLLAMA_URL}`, {
+
+  const response = await fetch(`${GEMINI_URL}?key=${GEMINI_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  console.log(response)
-  if (!response.ok) {
-    console.log("lfjsdlkf")
-    const text = await response.text();
-    throw new Error(`Ollama returned ${response.status}: ${text}`);
-  }
 
-  const data = (await response.json()) as OllamaChatResponse;
+  if (!response.ok) throw new Error(`Gemini ${response.status}: ${await response.text()}`);
 
-  if (!data.message?.content) {
-    throw new Error('Ollama response missing message.content');
-  }
+  const data = (await response.json()) as GeminiResponse;
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Empty response from Gemini');
 
-  try {
-    return JSON.parse(data.message.content) as unknown;
-  } catch {
-    throw new Error(`Ollama returned invalid JSON: ${data.message.content.slice(0, 200)}`);
-  }
+  return JSON.parse(text);
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/stories/generate
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,7 +90,7 @@ storyRouter.post('/generate', async (req: Request, res: Response) => {
   };
 
   try {
-    const result = await callOllama(
+    const result = await callGemini(
       buildGenerateSystemPrompt(),
       buildGenerateUserPrompt(request),
     );
@@ -153,10 +138,11 @@ storyRouter.post('/continue', async (req: Request, res: Response) => {
     chosenText: body.chosenText,
     targetNodeId: body.targetNodeId,
     depth: body.depth,
+    isDeath: body.isDeath ?? false,
   };
 
   try {
-    const result = await callOllama(
+    const result = await callGemini(
       buildContinueSystemPrompt(),
       buildContinueUserPrompt(request),
     );
@@ -203,7 +189,7 @@ storyRouter.post('/regenerate', async (req: Request, res: Response) => {
   };
 
   try {
-    const result = await callOllama(
+    const result = await callGemini(
       buildRegenerateSystemPrompt(),
       buildRegenerateUserPrompt(request),
     );

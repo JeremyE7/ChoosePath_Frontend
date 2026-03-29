@@ -1,6 +1,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://choosepath-api.cubepath.app/api',
-  ollamaUrl: 'http://144.225.147.44:11434/api/generate',
-  ollamaModel: 'llama3.2:1b'
+  geminiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+  geminiKey: '',
+  mongoDbUrl: 'mongodb://localhost:27017/choosepath?authSource=admin',
 };

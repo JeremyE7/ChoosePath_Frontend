@@ -9,6 +9,7 @@ export interface ChoiceShape {
   key: string;           // 'A', 'B', 'C'
   text: string;          // Choice display text
   nextNodeId: string;    // Semantic ID of the destination node (e.g. "taverna_b")
+  deadly?: boolean;      // Whether this choice leads to death
 }
 
 export interface EventShape {
@@ -23,6 +24,7 @@ export interface NodeShape {
   choices: ChoiceShape[];
   events: EventShape[];
   memoryKeys: string[];  // Keys referencing MemoryShape entries
+  isDeath?: boolean;     // Whether this node is a death scene
 }
 
 export interface MemoryShape {
@@ -79,6 +81,7 @@ export interface ContinueRequest {
   chosenText: string;          // The choice text that was selected
   targetNodeId: string;        // The node ID to generate (already defined in JSON as nextNodeId)
   depth: number;               // Current depth level (1-based)
+  isDeath?: boolean;            // Whether the chosen option was deadly (generate death scene)
 }
 
 /** Single node + any new memories returned from /continue */
@@ -111,29 +114,25 @@ export interface RegenerateResponse {
   newMemories: Record<string, MemoryShape>;
 }
 
-// ── Ollama HTTP API ───────────────────────────────────────────────────────────
+// ── Gemini HTTP API ──────────────────────────────────────────────────────────
 
-export interface OllamaMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface OllamaChatRequest {
-  model: string;
-  messages: OllamaMessage[];
-  stream: false;
-  format: 'json';
-  options?: {
+export interface GeminiRequest {
+  contents: { role: string; parts: { text: string }[] }[];
+  systemInstruction?: { parts: { text: string }[] };
+  generationConfig?: {
     temperature?: number;
-    top_p?: number;
-    num_predict?: number;
+    topP?: number;
+    maxOutputTokens?: number;
+    responseMimeType?: string;
   };
 }
 
-export interface OllamaChatResponse {
-  message: {
-    role: string;
-    content: string;
-  };
-  done: boolean;
+export interface GeminiResponse {
+  candidates: {
+    content: {
+      parts: { text: string }[];
+      role: string;
+    };
+    finishReason: string;
+  }[];
 }

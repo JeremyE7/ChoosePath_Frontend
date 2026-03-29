@@ -1,7 +1,6 @@
 /**
  * App - Root component
- * Main layout with header, sidebar, center, right panel
- * Now split into smaller, focused components
+ * Game with death mechanic, scoreboard, backtracking, and AI continuation
  */
 import {
   Component,
@@ -15,7 +14,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { StoryService } from './services/story.service';
 import { MemoryService } from './services/memory.service';
-import { Choice } from './models/story.model';
+import { ScoreService } from './services/score.service';
+import { Choice, ScoreEntry } from './models/story.model';
 
 // Components
 import { HeaderComponent } from './components/header/header.component';
@@ -25,6 +25,7 @@ import { NarrativePanelComponent } from './components/narrative-panel/narrative-
 import { ChoicePanelComponent } from './components/choice-panel/choice-panel.component';
 import { MemoryNotificationComponent } from './components/memory-notification/memory-notification.component';
 import { ToastComponent } from './components/toast/toast.component';
+import { StartScreenComponent } from './components/start-screen/start-screen.component';
 
 @Component({
   selector: 'app-root',
@@ -39,6 +40,7 @@ import { ToastComponent } from './components/toast/toast.component';
     ChoicePanelComponent,
     MemoryNotificationComponent,
     ToastComponent,
+    StartScreenComponent,
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
@@ -46,8 +48,8 @@ import { ToastComponent } from './components/toast/toast.component';
 export class App implements OnInit {
   private readonly storyService = inject(StoryService);
   private readonly memoryService = inject(MemoryService);
+  private readonly scoreService = inject(ScoreService);
 
-  // ViewChild for tree canvas element
   @ViewChild(TreeCanvasComponent) treeCanvasComponent!: TreeCanvasComponent;
 
   // Drag state
@@ -59,7 +61,16 @@ export class App implements OnInit {
   private _dragSnap = false;
 
   // ==========================================================================
-  // STATE SIGNALS (exposed to child components)
+  // GAME STATE
+  // ==========================================================================
+
+  readonly gamePhase = signal<'start' | 'playing' | 'dead'>('start');
+  readonly playerNickname = signal('');
+  readonly topScores = signal<ScoreEntry[]>([]);
+  readonly scoreSaved = signal(false);
+
+  // ==========================================================================
+  // STATE SIGNALS
   // ==========================================================================
 
   readonly memoryCount = this.memoryService.memoryCount;
@@ -69,6 +80,10 @@ export class App implements OnInit {
   readonly currentLabel = this.storyService.currentLabel;
   readonly currentScene = this.storyService.currentScene;
   readonly viewBoxString = computed(() => this.storyService.getViewBoxString());
+  readonly loading = this.storyService.loading;
+  readonly isPlayerDead = this.storyService.isPlayerDead;
+  readonly playerScore = this.storyService.maxDepthEverReached;
+  readonly storyTitle = this.storyService.storyTitle;
 
   // Ghost signals
   readonly ghostText = signal('');
@@ -83,7 +98,6 @@ export class App implements OnInit {
   // Hint
   readonly hintVisible = signal(true);
 
-
   // ==========================================================================
   // COMPUTED VALUES
   // ==========================================================================
@@ -93,6 +107,7 @@ export class App implements OnInit {
   readonly currentNode = this.storyService.currentNode;
 
   readonly currentNodeChoices = computed<Choice[]>(() => {
+    if (this.isPlayerDead()) return [];
     const node = this.currentNode();
     return node?.choices || [];
   });
@@ -107,7 +122,6 @@ export class App implements OnInit {
     return node?.events || [];
   });
 
-  // Tree rendering
   readonly treeNodes = computed(() => {
     const nodes = this.storyService.nodes();
     const currentId = this.storyService.currentNodeId();
@@ -122,6 +136,8 @@ export class App implements OnInit {
       { fill: 'rgba(240,86,122,.1)', stroke: '#f0567a', txt: '#b03050' },
       { fill: 'rgba(16,185,129,.1)', stroke: '#10b981', txt: '#077050' },
     ];
+
+    const DEATH_COLOR = { fill: 'rgba(240,86,122,.18)', stroke: '#f0567a', txt: '#b03050' };
 
     const getNodeDepth = (nodeId: string): number => {
       if (nodeId === 'root') return 0;
@@ -141,7 +157,8 @@ export class App implements OnInit {
       const isCurrent = node.id === currentId;
       const isOnPath = this.storyService.isOnCurrentPath(node.id);
       const depth = getNodeDepth(node.id);
-      const color = COLORS[depth % COLORS.length];
+      const isDeath = node.isDeath === true;
+      const color = isDeath ? DEATH_COLOR : COLORS[depth % COLORS.length];
 
       return {
         id: node.id,
@@ -155,13 +172,16 @@ export class App implements OnInit {
         isCurrent,
         isOnPath,
         isNew: false,
+        isDeath,
         color,
         fill: isCurrent ? color.fill : isOnPath ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.5)',
-        stroke: isCurrent
-          ? color.stroke
-          : isOnPath
-            ? 'rgba(120,140,200,.5)'
-            : 'rgba(180,190,220,.4)',
+        stroke: isDeath
+          ? '#f0567a'
+          : isCurrent
+            ? color.stroke
+            : isOnPath
+              ? 'rgba(120,140,200,.5)'
+              : 'rgba(180,190,220,.4)',
         strokeWidth: isCurrent ? '1.6' : isOnPath ? '1.2' : '0.8',
         textFill: isCurrent ? color.txt : isOnPath ? '#384060' : '#9aa0c0',
       };
@@ -192,6 +212,8 @@ export class App implements OnInit {
       (node.childIds || []).forEach((cid) => {
         const cp = positions[cid];
         if (!cp) return;
+        const childNode = nodes[cid];
+        const isDeath = childNode?.isDeath === true;
         const on =
           this.storyService.isOnCurrentPath(nodeId) && this.storyService.isOnCurrentPath(cid);
         const mid = (p.y + NH + cp.y) / 2;
@@ -199,7 +221,7 @@ export class App implements OnInit {
         edges.push({
           id: `${nodeId}-${cid}`,
           path: `M${p.x + NW / 2},${p.y + NH} C${p.x + NW / 2},${mid} ${cp.x + NW / 2},${mid} ${cp.x + NW / 2},${cp.y}`,
-          stroke: on ? '#4a7cf7' : 'rgba(120,140,200,.28)',
+          stroke: isDeath ? '#f0567a' : on ? '#4a7cf7' : 'rgba(120,140,200,.28)',
           strokeWidth: on ? '1.8' : '1',
           markerEnd: on ? 'url(#ahb)' : 'url(#ah)',
           isNew: false,
@@ -222,7 +244,6 @@ export class App implements OnInit {
     }));
   });
 
-  // Ghost stub paths for rendering
   readonly ghostStubPaths = computed(() => {
     const choices = this.currentNodeChoices();
     const n = choices.length;
@@ -244,7 +265,6 @@ export class App implements OnInit {
     });
   });
 
-  // Function for hasMemory check
   hasMemoryFn = (text: string): boolean => {
     return this.memoryService.hasMem(text);
   };
@@ -254,11 +274,54 @@ export class App implements OnInit {
   // ==========================================================================
 
   ngOnInit(): void {
+    this._loadTopScores();
+  }
+
+  // ==========================================================================
+  // GAME FLOW
+  // ==========================================================================
+
+  onGameStart(data: { nickname: string; theme: string; genre: string; tone: string }): void {
+    this.playerNickname.set(data.nickname);
+    this.gamePhase.set('playing');
+    this.scoreSaved.set(false);
     this.storyService.loadStory({
-      genre: "Terror",
-      language: "Español",
-      theme: "Visitas a tu familia en tu pueblo de la infancia pero todo tiene un ambiente mas funebre, nublado y oscuro, empiezas a notar como tu familia actua de forma antinatural y todo el pueblo tiene una mirada y sonrisa perturbadoramente grande, tienes que investigar que esta pasando en el pueblo y sobre todo averiguar si esa gente verdaderamente es tu familia",
-      tone: "Tetrico, horror cosmico y turbio al extremo"
+      genre: data.genre,
+      language: 'Español',
+      theme: data.theme,
+      tone: data.tone,
+    });
+  }
+
+  onSaveScore(): void {
+    if (this.scoreSaved()) return;
+    this.scoreService.saveScore(
+      this.playerNickname(),
+      this.playerScore(),
+      this.storyTitle(),
+    ).subscribe({
+      next: () => {
+        this.scoreSaved.set(true);
+        this._loadTopScores();
+        this.showToast('Score guardado');
+      },
+      error: (err) => {
+        console.error('Failed to save score:', err);
+        this.showToast('Error al guardar score');
+      },
+    });
+  }
+
+  onPlayAgain(): void {
+    this.gamePhase.set('start');
+    this.storyService.resetStory();
+    this.memoryService.clearMemories();
+  }
+
+  private _loadTopScores(): void {
+    this.scoreService.getTopScores().subscribe({
+      next: (scores) => this.topScores.set(scores),
+      error: () => {},
     });
   }
 
@@ -284,19 +347,19 @@ export class App implements OnInit {
 
   onNodeClick(nodeId: string): void {
     const node = this.storyService.nodes()[nodeId];
-    if (node && node.id !== this.storyService.currentNodeId() && (node.childIds || []).length > 0) {
+    if (node && node.id !== this.storyService.currentNodeId()) {
       this.storyService.navTo(nodeId);
     }
   }
 
   onChoiceDragStart(choice: Choice): void {
-    // Check if this is a keyboard-initiated "commit" (same choice twice quickly)
+    if (this.loading() || this.isPlayerDead()) return;
+
     if (this._isDragging && this._dragChoice?.nextNodeId === choice.nextNodeId && this._dragMoved) {
       this.commitChoice(choice);
       return;
     }
 
-    // Start drag operation
     this._isDragging = true;
     this._dragChoice = choice;
     this._dragMoved = false;
@@ -312,18 +375,14 @@ export class App implements OnInit {
       const canvasWidth = rect.width;
       const canvasHeight = rect.height;
 
-      // Get viewBox for coordinate transformation
       const vb = this.storyService.viewBox();
 
-      // Convert mouse position from screen to canvas-relative
       const mouseCanvasX = e.clientX - rect.left;
       const mouseCanvasY = e.clientY - rect.top;
 
-      // Convert canvas pixels to SVG coordinate space
       const svgX = vb.x + (mouseCanvasX / canvasWidth) * vb.w;
       const svgY = vb.y + (mouseCanvasY / canvasHeight) * vb.h;
 
-      // Check if we've moved enough to start dragging
       if (!this._dragMoved) {
         const dragStartCanvasX = this._dragStartX - rect.left;
         const dragStartCanvasY = this._dragStartY - rect.top;
@@ -333,7 +392,6 @@ export class App implements OnInit {
         this.ghostVisible.set(true);
       }
 
-      // Get current node position in SVG coordinates
       const currentId = this.storyService.currentNodeId();
       const pos = this.storyService.nodePositions()[currentId];
 
@@ -354,22 +412,10 @@ export class App implements OnInit {
         }
       }
 
-      // Position ghost at screen coordinates
       this.ghostPosition.set({ x: e.clientX - 100, y: e.clientY - 20 });
     };
 
-    const onMouseUp = (e: MouseEvent) => {
-      // Get the position where mouse was released
-      const canvasEl = this.treeCanvasComponent.getCanvasElement().nativeElement;
-      const rect = canvasEl.getBoundingClientRect();
-
-      // Check if mouse was released over the tree canvas
-      const isOverCanvas =
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom;
-
+    const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
 
@@ -377,13 +423,11 @@ export class App implements OnInit {
       this.ghostSnap.set(false);
       this._isDragging = false;
 
-      // Check if we should commit: moved and either snapped or released over canvas
       if (this._dragMoved && this._dragSnap && this._dragChoice) {
         this.commitChoice(this._dragChoice);
       }
     };
 
-    // Set up initial drag position and add listeners
     this._dragStartX = 0;
     this._dragStartY = 0;
 
@@ -398,10 +442,10 @@ export class App implements OnInit {
     document.addEventListener('mousedown', startDrag);
   }
 
-  private commitChoice(choice: Choice): void {
-    if (!choice.nextNodeId) return;
+  private async commitChoice(choice: Choice): Promise<void> {
+    if (!choice.nextNodeId || this.loading()) return;
 
-    const newId = this.storyService.commitChoice(choice.nextNodeId);
+    const newId = await this.storyService.commitChoice(choice);
     if (!newId) return;
 
     const node = this.storyService.nodes()[newId];
@@ -413,15 +457,23 @@ export class App implements OnInit {
           this.memoryService.addMem(k, ev.who, ev.description, node.id);
         }
       });
+
+      if (node.isDeath) {
+        this.gamePhase.set('dead');
+        this.showToast('Has muerto. Score: ' + this.playerScore());
+      } else {
+        this.showToast(`"${node.label}" agregado al arbol`);
+      }
     }
 
-    this.showToast(`"${this.storyService.nodes()[newId]?.label}" anadido al arbol`);
     setTimeout(() => this.storyService.centerOn(newId), 80);
   }
 
   onReset(): void {
     this.storyService.resetStory();
     this.memoryService.clearMemories();
+    this.scoreSaved.set(false);
+    this.gamePhase.set('playing');
     this.showToast('Historia reiniciada');
   }
 

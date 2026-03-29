@@ -1,13 +1,5 @@
 /**
- * StoryService - Manages story state, tree layout, and navigation
- *
- * Responsibilities:
- * - Load story data via StoryDataService
- * - Hold all active story nodes in memory
- * - Track current node position
- * - Calculate tree layout positions
- * - Handle node navigation and choice commits
- * - Manage zoom/viewbox state
+ * StoryService - Manages story state, tree layout, navigation, and AI continuation
  */
 import { Injectable, inject, signal, computed } from '@angular/core';
 import {
@@ -16,20 +8,27 @@ import {
   StoryNodeTemplate,
   NodePosition,
   ViewBox,
+  Choice,
   DEPTH_COLORS,
   TREE_CONFIG,
 } from '../models/story.model';
 import { StoryDataService } from './story-data.service';
-import { GenerateRequest } from '../../server/story.types';
+import { MemoryService } from './memory.service';
+import type { GenerateRequest, ContinueRequest, VisitedNode, ActiveMemory } from '../../server/story.types';
+import { firstValueFrom } from 'rxjs';
 
 const DEFAULT_VIEWBOX: ViewBox = { x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 };
 
 @Injectable({ providedIn: 'root' })
 export class StoryService {
   private readonly storyDataService = inject(StoryDataService);
+  private readonly memoryService = inject(MemoryService);
 
   /** Loaded story templates (the "database" of available nodes) */
   private storyData: StoryData | null = null;
+
+  /** Story config for /continue calls */
+  private storyConfig: Partial<GenerateRequest> = {};
 
   // ==========================================================================
   // STATE SIGNALS
@@ -43,6 +42,9 @@ export class StoryService {
   private readonly _maxDepth = signal<number>(0);
   private readonly _branchCount = signal<number>(0);
   private readonly _loaded = signal<boolean>(false);
+  private readonly _loading = signal<boolean>(false);
+  private readonly _isPlayerDead = signal<boolean>(false);
+  private readonly _maxDepthEverReached = signal<number>(0);
 
   // ==========================================================================
   // PUBLIC READONLY SIGNALS
@@ -56,6 +58,9 @@ export class StoryService {
   readonly maxDepth = this._maxDepth.asReadonly();
   readonly branchCount = this._branchCount.asReadonly();
   readonly loaded = this._loaded.asReadonly();
+  readonly loading = this._loading.asReadonly();
+  readonly isPlayerDead = this._isPlayerDead.asReadonly();
+  readonly maxDepthEverReached = this._maxDepthEverReached.asReadonly();
 
   // ==========================================================================
   // COMPUTED VALUES
@@ -64,27 +69,29 @@ export class StoryService {
   readonly currentNode = computed(() => this._nodes()[this._currentNodeId()]);
   readonly currentLabel = computed(() => this.currentNode()?.label ?? '');
   readonly currentScene = computed(() => this.currentNode()?.scene ?? '');
+  readonly storyTitle = computed(() => this.storyData?.title ?? '');
 
   // ==========================================================================
   // INITIALIZATION
   // ==========================================================================
 
-  /**
-   * Load and initialize a story by its slug.
-   * Fetches the JSON via StoryDataService, then builds the root node.
-   */
   loadStory(storyTheme: Partial<GenerateRequest>): void {
+    this.storyConfig = storyTheme;
+    this._loading.set(true);
     this.storyDataService.loadStory(storyTheme).subscribe({
       next: (data) => {
         this.storyData = data;
         this._initFromLoadedData();
         this._loaded.set(true);
+        this._loading.set(false);
       },
-      error: (err) => console.error('Failed to load story:', err),
+      error: (err) => {
+        console.error('Failed to load story:', err);
+        this._loading.set(false);
+      },
     });
   }
 
-  /** Build the root node from loaded story data */
   private _initFromLoadedData(): void {
     if (!this.storyData) return;
 
@@ -97,7 +104,6 @@ export class StoryService {
     this._recalculateTreeLayout();
   }
 
-  /** Reset story to initial state */
   resetStory(): void {
     this._nodes.set({});
     this._nodeCount.set(1);
@@ -105,6 +111,8 @@ export class StoryService {
     this._branchCount.set(0);
     this._nodePositions.set({});
     this._viewBox.set({ ...DEFAULT_VIEWBOX });
+    this._isPlayerDead.set(false);
+    this._maxDepthEverReached.set(0);
     this._initFromLoadedData();
   }
 
@@ -123,46 +131,195 @@ export class StoryService {
   }
 
   // ==========================================================================
-  // COMMIT CHOICE
+  // COMMIT CHOICE (async — supports both pre-generated and /continue nodes)
   // ==========================================================================
 
   /**
-   * Commit a choice by its nextNodeId.
-   * Looks up the node template in the loaded story data and creates a runtime node.
+   * Commit a choice. If the node template exists locally, use it.
+   * If a runtime node already exists for this choice, navigate to it.
+   * Otherwise, call /continue to generate a new node from the AI.
    */
-  commitChoice(nextNodeId: string): string {
+  async commitChoice(choice: Choice): Promise<string> {
     const parent = this.currentNode();
-    if (!parent || !this.storyData) return '';
+    if (!parent || !this.storyData || !choice.nextNodeId) return '';
 
-    const template = this.storyData.nodes[nextNodeId];
-    if (!template) return '';
+    // Check if a child for this choice already exists (backtracking scenario)
+    const existingChildId = this._findExistingChild(parent, choice.nextNodeId);
+    if (existingChildId) {
+      this._currentNodeId.set(existingChildId);
+      this._centerViewOnNode(existingChildId);
+      return existingChildId;
+    }
 
+    const depth = this._calculateDepth(parent.id) + 1;
+    const isDeath = choice.deadly === true;
+
+    // Check if template exists locally (pre-generated nodes)
+    const template = this.storyData.nodes[choice.nextNodeId];
+    if (template && !isDeath) {
+      return this._createNodeFromTemplate(parent, template, depth);
+    }
+
+    // Call /continue endpoint for new nodes or death scenes
+    return this._continueFromAI(parent, choice, depth, isDeath);
+  }
+
+  private _createNodeFromTemplate(parent: StoryNode, template: StoryNodeTemplate, depth: number): string {
     const newId = 'n' + (this._nodeCount() + 1);
     const newNode = this._templateToNode(newId, template);
 
-    // Add new node to the tree
     this._nodes.update(nodes => ({ ...nodes, [newId]: newNode }));
 
-    // Link child to parent
     const updatedParent = { ...parent, childIds: [...parent.childIds, newId] };
     this._nodes.update(nodes => ({ ...nodes, [parent.id]: updatedParent }));
 
-    // Update stats
     this._nodeCount.update(c => c + 1);
     this._branchCount.update(b => b + 1);
-    this._maxDepth.update(d => Math.max(d, this._calculateDepth(newId)));
+    this._maxDepth.update(d => Math.max(d, depth));
+    this._maxDepthEverReached.update(d => Math.max(d, depth));
 
     this._currentNodeId.set(newId);
     this._recalculateTreeLayout();
 
+    if (newNode.isDeath) {
+      this._isPlayerDead.set(true);
+    }
+
     return newId;
+  }
+
+  private async _continueFromAI(parent: StoryNode, choice: Choice, depth: number, isDeath: boolean): Promise<string> {
+    this._loading.set(true);
+
+    try {
+      const request: ContinueRequest = {
+        storyTitle: this.storyData!.title,
+        theme: this.storyConfig.theme ?? '',
+        genre: this.storyConfig.genre ?? '',
+        tone: this.storyConfig.tone ?? '',
+        language: this.storyConfig.language ?? 'es',
+        history: this._buildHistory(),
+        activeMemories: this._buildActiveMemories(),
+        parentNodeId: parent.id,
+        chosenText: choice.text,
+        targetNodeId: choice.nextNodeId!,
+        depth,
+        isDeath,
+      };
+
+      const response = await firstValueFrom(this.storyDataService.continueStory(request));
+
+      // Store template for future use
+      const nodeData = response.node;
+      const template: StoryNodeTemplate = {
+        label: nodeData.label,
+        scene: nodeData.scene,
+        choices: nodeData.choices ?? [],
+        events: nodeData.events ?? [],
+        memoryKeys: nodeData.memoryKeys ?? [],
+        isDeath: nodeData.isDeath,
+      };
+
+      // Add new memories from response
+      if (response.newMemories) {
+        for (const [key, mem] of Object.entries(response.newMemories)) {
+          this.storyData!.nodes[key] = this.storyData!.nodes[key] ?? {} as StoryNodeTemplate;
+          this.memoryService.addMem(key, mem.who, mem.text, parent.id);
+        }
+      }
+
+      const newId = this._createNodeFromTemplate(parent, template, depth);
+
+      if (isDeath) {
+        this._isPlayerDead.set(true);
+      }
+
+      return newId;
+    } catch (err) {
+      console.error('[continueFromAI] Error:', err);
+      return '';
+    } finally {
+      this._loading.set(false);
+    }
+  }
+
+  /** Find an existing child node that was created from a specific choice */
+  private _findExistingChild(parent: StoryNode, templateNodeId: string): string | null {
+    const nodes = this._nodes();
+    for (const childId of parent.childIds) {
+      const child = nodes[childId];
+      if (child && child.label) {
+        const template = this.storyData?.nodes[templateNodeId];
+        if (template && child.label === template.label) {
+          return childId;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Build visit history from root to current node */
+  private _buildHistory(): VisitedNode[] {
+    const history: VisitedNode[] = [];
+    const nodes = this._nodes();
+    const path = this._getPathToNode(this._currentNodeId());
+
+    for (const nodeId of path) {
+      const node = nodes[nodeId];
+      if (!node) continue;
+
+      const childOnPath = path[path.indexOf(nodeId) + 1];
+      let choiceTaken: string | null = null;
+
+      if (childOnPath) {
+        for (const choice of node.choices) {
+          const template = this.storyData?.nodes[choice.nextNodeId ?? ''];
+          const childNode = nodes[childOnPath];
+          if (template && childNode && childNode.label === template.label) {
+            choiceTaken = choice.text;
+            break;
+          }
+        }
+      }
+
+      history.push({
+        nodeId: node.id,
+        label: node.label,
+        scene: node.scene,
+        choiceTaken,
+      });
+    }
+
+    return history;
+  }
+
+  /** Build active memories list */
+  private _buildActiveMemories(): ActiveMemory[] {
+    return this.memoryService.getAllMemories().map(m => ({
+      key: m.nodeId,
+      who: m.who,
+      text: m.txt,
+    }));
+  }
+
+  /** Get path from root to a specific node */
+  private _getPathToNode(targetId: string): string[] {
+    const path: string[] = [];
+    let current = targetId;
+    while (current) {
+      path.unshift(current);
+      if (current === 'root') break;
+      const parent = this.findParentNode(current);
+      if (!parent) break;
+      current = parent;
+    }
+    return path;
   }
 
   // ==========================================================================
   // HELPERS
   // ==========================================================================
 
-  /** Convert a JSON template into a runtime StoryNode */
   private _templateToNode(id: string, template: StoryNodeTemplate): StoryNode {
     return {
       id,
@@ -172,6 +329,7 @@ export class StoryService {
       events: template.events,
       memoryKeys: template.memoryKeys,
       childIds: [],
+      isDeath: template.isDeath,
     };
   }
 
@@ -260,10 +418,6 @@ export class StoryService {
   // ZOOM AND PAN
   // ==========================================================================
 
-  /**
-   * Pan the viewBox by a delta in SVG coordinate units.
-   * dx/dy are already in SVG space (converted by the canvas component).
-   */
   panViewBox(dx: number, dy: number): void {
     this._viewBox.update(v => ({ ...v, x: v.x + dx, y: v.y + dy }));
   }

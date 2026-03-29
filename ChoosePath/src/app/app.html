@@ -1,91 +1,123 @@
 <!-- Aurora background -->
 <div class="aurora" aria-hidden="true"></div>
 
-<!-- Header -->
-<app-header></app-header>
+@if (gamePhase() === 'start') {
+  <app-start-screen (gameStart)="onGameStart($event)"></app-start-screen>
+}
 
-<!-- Shell -->
-<div class="shell">
-  <!-- Sidebar -->
-  <app-sidebar
-    [memoryLogEntries]="memoryLogEntries()"
-    [memoryCount]="memoryCount()"
-    (reset)="onReset()"
-    (export)="onExport()"
-  ></app-sidebar>
+@if (gamePhase() === 'playing' || gamePhase() === 'dead') {
+  <!-- Header -->
+  <app-header></app-header>
 
-  <!-- Center: Tree Canvas -->
-  <div class="center">
-    <div class="tree-bar">
-      <div class="bc">
-        <span class="bci">El Galeón</span>
-        <span class="bcsep">›</span>
-        <span class="bci cur">{{ currentLabel() }}</span>
-      </div>
-      <div class="tstats">
-        <div class="tst">
-          <span class="tst-v">{{ nodeCount() }}</span>
-          <span class="tst-l">Nodos</span>
+  <!-- Shell -->
+  <div class="shell">
+    <!-- Sidebar -->
+    <app-sidebar
+      [memoryLogEntries]="memoryLogEntries()"
+      [memoryCount]="memoryCount()"
+      [topScores]="topScores()"
+      [playerNickname]="playerNickname()"
+      [currentScore]="playerScore()"
+      [isGameActive]="gamePhase() === 'playing'"
+      (reset)="onReset()"
+      (export)="onExport()"
+    ></app-sidebar>
+
+    <!-- Center: Tree Canvas -->
+    <div class="center">
+      <div class="tree-bar">
+        <div class="bc">
+          <span class="bci">{{ storyTitle() || 'Historia' }}</span>
+          <span class="bcsep">&rsaquo;</span>
+          <span class="bci cur">{{ currentLabel() }}</span>
         </div>
-        <div class="tst">
-          <span class="tst-v">{{ maxDepth() }}</span>
-          <span class="tst-l">Prof.</span>
+        <div class="tstats">
+          <div class="tst">
+            <span class="tst-v">{{ nodeCount() }}</span>
+            <span class="tst-l">Nodos</span>
+          </div>
+          <div class="tst">
+            <span class="tst-v">{{ playerScore() }}</span>
+            <span class="tst-l">Score</span>
+          </div>
+          <div class="tst">
+            <span class="tst-v">{{ branches() }}</span>
+            <span class="tst-l">Ramas</span>
+          </div>
         </div>
-        <div class="tst">
-          <span class="tst-v">{{ branches() }}</span>
-          <span class="tst-l">Ramas</span>
+        <div class="zbtns">
+          <button class="zb" (click)="onZoomIn()">+</button>
+          <button class="zb" (click)="onZoomOut()">&minus;</button>
+          <button class="zb" style="font-size:.46rem" (click)="onZoomFit()">fit</button>
         </div>
       </div>
-      <div class="zbtns">
-        <button class="zb" (click)="onZoomIn()">+</button>
-        <button class="zb" (click)="onZoomOut()">−</button>
-        <button class="zb" style="font-size:.46rem" (click)="onZoomFit()">fit</button>
-      </div>
+
+      <app-tree-canvas
+        [treeNodes]="treeNodes()"
+        [treeEdges]="treeEdges()"
+        [viewBoxString]="viewBoxString()"
+        [hintVisible]="hintVisible()"
+        [currentNodeChildren]="currentNodeChildren()"
+        [ghostStubPaths]="ghostStubPaths()"
+        (nodeClick)="onNodeClick($event)"
+        (pan)="onCanvasPan($event)"
+      ></app-tree-canvas>
+
+      @if (loading()) {
+        <div class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <span class="loading-text">La IA esta pensando...</span>
+        </div>
+      }
     </div>
 
-    <app-tree-canvas
-      [treeNodes]="treeNodes()"
-      [treeEdges]="treeEdges()"
-      [viewBoxString]="viewBoxString()"
-      [hintVisible]="hintVisible()"
-      [currentNodeChildren]="currentNodeChildren()"
-      [ghostStubPaths]="ghostStubPaths()"
-      (nodeClick)="onNodeClick($event)"
-      (pan)="onCanvasPan($event)"
-    ></app-tree-canvas>
+    <!-- Right Panel -->
+    <div class="rp-wrap">
+      <app-narrative-panel
+        [currentLabel]="currentLabel()"
+        [currentScene]="currentScene()"
+        [currentEvents]="currentEvents()"
+        [depthPips]="depthPips()"
+        [depth]="maxDepth()"
+      ></app-narrative-panel>
+
+      @if (gamePhase() === 'dead') {
+        <div class="death-panel">
+          <div class="death-icon">&#9760;</div>
+          <h3 class="death-title">Has muerto</h3>
+          <p class="death-score">Score final: <strong>{{ playerScore() }}</strong></p>
+          <p class="death-nickname">Jugador: {{ playerNickname() }}</p>
+          @if (!scoreSaved()) {
+            <button class="death-btn save" (click)="onSaveScore()">Guardar score</button>
+          } @else {
+            <p class="death-saved">Score guardado</p>
+          }
+          <button class="death-btn retry" (click)="onPlayAgain()">Jugar de nuevo</button>
+        </div>
+      } @else {
+        <app-choice-panel
+          [choices]="currentNodeChoices()"
+          [hasMemory]="hasMemoryFn"
+          (choiceDragStart)="onChoiceDragStart($event)"
+        ></app-choice-panel>
+      }
+    </div>
   </div>
 
-  <!-- Right Panel -->
-  <div class="rp-wrap">
-    <app-narrative-panel
-      [currentLabel]="currentLabel()"
-      [currentScene]="currentScene()"
-      [currentEvents]="currentEvents()"
-      [depthPips]="depthPips()"
-      [depth]="maxDepth()"
-    ></app-narrative-panel>
+  <!-- Memory Notifications -->
+  <app-memory-notification></app-memory-notification>
 
-    <app-choice-panel
-      [choices]="currentNodeChoices()"
-      [hasMemory]="hasMemoryFn"
-      (choiceDragStart)="onChoiceDragStart($event)"
-    ></app-choice-panel>
+  <!-- Ghost for drag preview -->
+  <div
+    id="ghost"
+    [class.snap]="ghostSnap()"
+    [style.display]="ghostVisible() ? 'block' : 'none'"
+    [style.left.px]="ghostPosition().x"
+    [style.top.px]="ghostPosition().y"
+  >
+    {{ ghostText() }}
   </div>
-</div>
 
-<!-- Memory Notifications -->
-<app-memory-notification></app-memory-notification>
-
-<!-- Ghost for drag preview -->
-<div
-  id="ghost"
-  [class.snap]="ghostSnap()"
-  [style.display]="ghostVisible() ? 'block' : 'none'"
-  [style.left.px]="ghostPosition().x"
-  [style.top.px]="ghostPosition().y"
->
-  {{ ghostText() }}
-</div>
-
-<!-- Toast -->
-<app-toast [visible]="toastVisible()" [message]="toastMessage()"></app-toast>
+  <!-- Toast -->
+  <app-toast [visible]="toastVisible()" [message]="toastMessage()"></app-toast>
+}

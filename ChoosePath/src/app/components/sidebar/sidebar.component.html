@@ -1,39 +1,42 @@
-<aside class="sb" aria-label="Historias">
+<aside class="sb" aria-label="Scoreboard">
   <div class="sb-hd">
-    <span class="sb-lbl">Historias</span>
+    <span class="sb-lbl">Scoreboard</span>
     <span class="sb-badge">{{ memoryCount() }} mem</span>
   </div>
+
+  <!-- Current player status -->
+  @if (isGameActive()) {
+    <div class="current-player">
+      <div class="cp-nick">{{ playerNickname() }}</div>
+      <div class="cp-score">
+        <span class="cp-score-val">{{ currentScore() }}</span>
+        <span class="cp-score-lbl">profundidad</span>
+      </div>
+    </div>
+  }
+
+  <!-- Top Scores -->
   <div class="sb-list" role="list">
-    <div class="sb-sec">Activas</div>
-    <div class="sb-row on" tabindex="0">
-      <div class="sb-row-t">El Galeón de la Niebla</div>
-      <div class="sb-row-m">
-        <span class="gdot" style="background:var(--blue)"></span>
-        <span>Aventura - en curso</span>
-      </div>
-    </div>
-    <div class="sb-row" tabindex="0">
-      <div class="sb-row-t">La Cripta del Alquimista</div>
-      <div class="sb-row-m">
-        <span class="gdot" style="background:var(--violet)"></span>
-        <span>Terror - 12 nodos</span>
-      </div>
-    </div>
-    <div class="sb-row" tabindex="0">
-      <div class="sb-row-t">Marte, Año 2187</div>
-      <div class="sb-row-m">
-        <span class="gdot" style="background:var(--teal)"></span>
-        <span>Sci-fi - 5 nodos</span>
-      </div>
-    </div>
-    <div class="sb-sec">Completadas</div>
-    <div class="sb-row" tabindex="0">
-      <div class="sb-row-t">El Último Mensajero</div>
-      <div class="sb-row-m">
-        <span class="gdot" style="background:var(--green)"></span>
-        <span>Fantasía - 18 nodos</span>
-      </div>
-    </div>
+    <div class="sb-sec">Top Scores</div>
+    @if (topScores().length === 0) {
+      <div class="sb-empty">Sin scores aun</div>
+    } @else {
+      @for (score of topScores(); track score._id; let i = $index) {
+        <div class="sb-row" [class.on]="score.nickname === playerNickname()" tabindex="0">
+          <div class="sb-rank" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+            {{ i + 1 }}
+          </div>
+          <div class="sb-row-info">
+            <div class="sb-row-t">{{ score.nickname }}</div>
+            <div class="sb-row-m">
+              <span class="gdot" [style.background]="i < 3 ? 'var(--blue)' : 'var(--ink5)'"></span>
+              <span>{{ score.storyTitle | slice:0:20 }}</span>
+            </div>
+          </div>
+          <div class="sb-score-val">{{ score.score }}</div>
+        </div>
+      }
+    }
   </div>
 
   <!-- Memory log -->
@@ -41,7 +44,7 @@
     <div class="mem-log-hd">Memorias activas</div>
     <div class="mem-log-content">
       @if (memoryLogEntries().length === 0) {
-        <span class="mem-txt" style="font-size:.7rem;color:var(--ink5)">Sin memorias aún.</span>
+        <span class="mem-txt" style="font-size:.7rem;color:var(--ink5)">Sin memorias aun.</span>
       } @else {
         @for (entry of memoryLogEntries(); track entry.who) {
           <div class="mem-entry">

@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import type { ScoreEntry } from '../../models/story.model';
 
 export interface MemoryEntry {
   who: string;
@@ -15,9 +16,12 @@ export interface MemoryEntry {
   styleUrls: ['./sidebar.component.css'],
 })
 export class SidebarComponent {
-  // Use input() for reactive inputs
   memoryLogEntries = input.required<MemoryEntry[]>();
   memoryCount = input.required<number>();
+  topScores = input<ScoreEntry[]>([]);
+  playerNickname = input<string>('');
+  currentScore = input<number>(0);
+  isGameActive = input<boolean>(false);
 
   reset = output<void>();
   export = output<void>();

@@ -9,4 +9,4 @@ const ScoreSchema = new mongoose.Schema({
 
 ScoreSchema.index({ score: -1 });
 
-export const Score = mongoose.model('Score', ScoreSchema);
+export const Score = mongoose.models['Score'] || mongoose.model('Score', ScoreSchema);

@@ -14,7 +14,12 @@ import {
 } from '../models/story.model';
 import { StoryDataService } from './story-data.service';
 import { MemoryService } from './memory.service';
-import type { GenerateRequest, ContinueRequest, VisitedNode, ActiveMemory } from '../../server/story.types';
+import type {
+  GenerateRequest,
+  ContinueRequest,
+  VisitedNode,
+  ActiveMemory,
+} from '../../server/story.types';
 import { firstValueFrom } from 'rxjs';
 
 const DEFAULT_VIEWBOX: ViewBox = { x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 };
@@ -45,6 +50,7 @@ export class StoryService {
   private readonly _loading = signal<boolean>(false);
   private readonly _isPlayerDead = signal<boolean>(false);
   private readonly _maxDepthEverReached = signal<number>(0);
+  private readonly _storyData = signal<StoryData | null>(null);
 
   // ==========================================================================
   // PUBLIC READONLY SIGNALS
@@ -69,7 +75,7 @@ export class StoryService {
   readonly currentNode = computed(() => this._nodes()[this._currentNodeId()]);
   readonly currentLabel = computed(() => this.currentNode()?.label ?? '');
   readonly currentScene = computed(() => this.currentNode()?.scene ?? '');
-  readonly storyTitle = computed(() => this.storyData?.title ?? '');
+  readonly storyTitle = computed(() => this._storyData()?.title ?? '');
 
   // ==========================================================================
   // INITIALIZATION
@@ -80,7 +86,7 @@ export class StoryService {
     this._loading.set(true);
     this.storyDataService.loadStory(storyTheme).subscribe({
       next: (data) => {
-        this.storyData = data;
+        this._storyData.set(data);
         this._initFromLoadedData();
         this._loaded.set(true);
         this._loading.set(false);
@@ -93,9 +99,10 @@ export class StoryService {
   }
 
   private _initFromLoadedData(): void {
-    if (!this.storyData) return;
+    const data = this._storyData();
+    if (!data) return;
 
-    const rootTemplate = this.storyData.nodes[this.storyData.rootNodeId];
+    const rootTemplate = data.nodes[data.rootNodeId];
     if (!rootTemplate) return;
 
     const rootNode = this._templateToNode('root', rootTemplate);
@@ -141,11 +148,14 @@ export class StoryService {
    */
   async commitChoice(choice: Choice): Promise<string> {
     const parent = this.currentNode();
-    if (!parent || !this.storyData || !choice.nextNodeId) return '';
+    const data = this._storyData();
+    console.log(choice);
+    if (!parent || !data || !choice.nextNodeId) return '';
 
     // Check if a child for this choice already exists (backtracking scenario)
     const existingChildId = this._findExistingChild(parent, choice.nextNodeId);
     if (existingChildId) {
+      console.log('Found existing child node for choice, navigating to it:', existingChildId);
       this._currentNodeId.set(existingChildId);
       this._centerViewOnNode(existingChildId);
       return existingChildId;
@@ -155,8 +165,9 @@ export class StoryService {
     const isDeath = choice.deadly === true;
 
     // Check if template exists locally (pre-generated nodes)
-    const template = this.storyData.nodes[choice.nextNodeId];
+    const template = data.nodes[choice.nextNodeId];
     if (template && !isDeath) {
+      console.log('Found local template for choice, creating node from it:', choice.nextNodeId);
       return this._createNodeFromTemplate(parent, template, depth);
     }
 
@@ -164,19 +175,23 @@ export class StoryService {
     return this._continueFromAI(parent, choice, depth, isDeath);
   }
 
-  private _createNodeFromTemplate(parent: StoryNode, template: StoryNodeTemplate, depth: number): string {
+  private _createNodeFromTemplate(
+    parent: StoryNode,
+    template: StoryNodeTemplate,
+    depth: number,
+  ): string {
     const newId = 'n' + (this._nodeCount() + 1);
     const newNode = this._templateToNode(newId, template);
 
-    this._nodes.update(nodes => ({ ...nodes, [newId]: newNode }));
+    this._nodes.update((nodes) => ({ ...nodes, [newId]: newNode }));
 
     const updatedParent = { ...parent, childIds: [...parent.childIds, newId] };
-    this._nodes.update(nodes => ({ ...nodes, [parent.id]: updatedParent }));
+    this._nodes.update((nodes) => ({ ...nodes, [parent.id]: updatedParent }));
 
-    this._nodeCount.update(c => c + 1);
-    this._branchCount.update(b => b + 1);
-    this._maxDepth.update(d => Math.max(d, depth));
-    this._maxDepthEverReached.update(d => Math.max(d, depth));
+    this._nodeCount.update((c) => c + 1);
+    this._branchCount.update((b) => b + 1);
+    this._maxDepth.update((d) => Math.max(d, depth));
+    this._maxDepthEverReached.update((d) => Math.max(d, depth));
 
     this._currentNodeId.set(newId);
     this._recalculateTreeLayout();
@@ -188,12 +203,18 @@ export class StoryService {
     return newId;
   }
 
-  private async _continueFromAI(parent: StoryNode, choice: Choice, depth: number, isDeath: boolean): Promise<string> {
+  private async _continueFromAI(
+    parent: StoryNode,
+    choice: Choice,
+    depth: number,
+    isDeath: boolean,
+  ): Promise<string> {
     this._loading.set(true);
+    const data = this._storyData();
 
     try {
       const request: ContinueRequest = {
-        storyTitle: this.storyData!.title,
+        storyTitle: data!.title,
         theme: this.storyConfig.theme ?? '',
         genre: this.storyConfig.genre ?? '',
         tone: this.storyConfig.tone ?? '',
@@ -223,7 +244,7 @@ export class StoryService {
       // Add new memories from response
       if (response.newMemories) {
         for (const [key, mem] of Object.entries(response.newMemories)) {
-          this.storyData!.nodes[key] = this.storyData!.nodes[key] ?? {} as StoryNodeTemplate;
+          data!.nodes[key] = data!.nodes[key] ?? ({} as StoryNodeTemplate);
           this.memoryService.addMem(key, mem.who, mem.text, parent.id);
         }
       }
@@ -246,10 +267,11 @@ export class StoryService {
   /** Find an existing child node that was created from a specific choice */
   private _findExistingChild(parent: StoryNode, templateNodeId: string): string | null {
     const nodes = this._nodes();
+    const data = this._storyData();
     for (const childId of parent.childIds) {
       const child = nodes[childId];
       if (child && child.label) {
-        const template = this.storyData?.nodes[templateNodeId];
+        const template = data?.nodes[templateNodeId];
         if (template && child.label === template.label) {
           return childId;
         }
@@ -272,8 +294,9 @@ export class StoryService {
       let choiceTaken: string | null = null;
 
       if (childOnPath) {
+        const data = this._storyData();
         for (const choice of node.choices) {
-          const template = this.storyData?.nodes[choice.nextNodeId ?? ''];
+          const template = data?.nodes[choice.nextNodeId ?? ''];
           const childNode = nodes[childOnPath];
           if (template && childNode && childNode.label === template.label) {
             choiceTaken = choice.text;
@@ -295,7 +318,7 @@ export class StoryService {
 
   /** Build active memories list */
   private _buildActiveMemories(): ActiveMemory[] {
-    return this.memoryService.getAllMemories().map(m => ({
+    return this.memoryService.getAllMemories().map((m) => ({
       key: m.nodeId,
       who: m.who,
       text: m.txt,
@@ -342,7 +365,14 @@ export class StoryService {
     const newPositions: Record<string, NodePosition> = {};
 
     if (nodes['root']) {
-      this._layoutNodeRecursive('root', TREE_CONFIG.rootX, TREE_CONFIG.rootY, 0, nodes, newPositions);
+      this._layoutNodeRecursive(
+        'root',
+        TREE_CONFIG.rootX,
+        TREE_CONFIG.rootY,
+        0,
+        nodes,
+        newPositions,
+      );
     }
 
     this._nodePositions.set(newPositions);
@@ -364,7 +394,8 @@ export class StoryService {
     const children = node.childIds;
     if (children.length === 0) return;
 
-    const totalWidth = children.length * TREE_CONFIG.nodeWidth + (children.length - 1) * TREE_CONFIG.horizontalGap;
+    const totalWidth =
+      children.length * TREE_CONFIG.nodeWidth + (children.length - 1) * TREE_CONFIG.horizontalGap;
     const startX = x + TREE_CONFIG.nodeWidth / 2 - totalWidth / 2;
 
     children.forEach((childId, index) => {
@@ -419,11 +450,11 @@ export class StoryService {
   // ==========================================================================
 
   panViewBox(dx: number, dy: number): void {
-    this._viewBox.update(v => ({ ...v, x: v.x + dx, y: v.y + dy }));
+    this._viewBox.update((v) => ({ ...v, x: v.x + dx, y: v.y + dy }));
   }
 
   zoomIn(): void {
-    this._viewBox.update(vb => ({
+    this._viewBox.update((vb) => ({
       x: vb.x + vb.w * 0.1,
       y: vb.y + vb.h * 0.1,
       w: vb.w * 0.8,
@@ -434,7 +465,7 @@ export class StoryService {
   }
 
   zoomOut(): void {
-    this._viewBox.update(vb => ({
+    this._viewBox.update((vb) => ({
       x: vb.x - vb.w * 0.12,
       y: vb.y - vb.h * 0.12,
       w: vb.w * 1.24,
@@ -456,7 +487,7 @@ export class StoryService {
     const centerX = position.x + TREE_CONFIG.nodeWidth / 2 - vb.w / 2;
     const centerY = position.y + TREE_CONFIG.nodeHeight / 2 - vb.h / 2 - 60;
 
-    this._viewBox.update(v => ({ ...v, x: centerX, y: centerY }));
+    this._viewBox.update((v) => ({ ...v, x: centerX, y: centerY }));
   }
 
   centerOnCurrentNode(): void {

@@ -295,21 +295,20 @@ export class App implements OnInit {
 
   onSaveScore(): void {
     if (this.scoreSaved()) return;
-    this.scoreService.saveScore(
-      this.playerNickname(),
-      this.playerScore(),
-      this.storyTitle(),
-    ).subscribe({
-      next: () => {
-        this.scoreSaved.set(true);
-        this._loadTopScores();
-        this.showToast('Score guardado');
-      },
-      error: (err) => {
-        console.error('Failed to save score:', err);
-        this.showToast('Error al guardar score');
-      },
-    });
+    console.log(this.storyService.storyTitle(), this.playerNickname(), this.playerScore());
+    this.scoreService
+      .saveScore(this.playerNickname(), this.playerScore(), this.storyTitle())
+      .subscribe({
+        next: () => {
+          this.scoreSaved.set(true);
+          this._loadTopScores();
+          this.showToast('Score guardado');
+        },
+        error: (err) => {
+          console.error('Failed to save score:', err);
+          this.showToast('Error al guardar score');
+        },
+      });
   }
 
   onPlayAgain(): void {
@@ -444,6 +443,7 @@ export class App implements OnInit {
 
   private async commitChoice(choice: Choice): Promise<void> {
     if (!choice.nextNodeId || this.loading()) return;
+    console.log(choice);
 
     const newId = await this.storyService.commitChoice(choice);
     if (!newId) return;

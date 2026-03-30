@@ -96,8 +96,11 @@ export class App implements OnInit {
   readonly toastMessage = signal('');
   readonly toastType = signal<'success' | 'error'>('success');
 
-  // Hint
-  readonly hintVisible = signal(true);
+  // Hint - solo visible cuando no hay nodos o es el primer nodo
+  readonly hintVisible = computed(() => {
+    // Solo mostrar hint si hay 1 nodo (el root) y no se ha hecho ninguna elección
+    return this.nodeCount() <= 1 && this.gamePhase() === 'playing';
+  });
 
   // ==========================================================================
   // COMPUTED VALUES
@@ -374,6 +377,14 @@ export class App implements OnInit {
     this.storyService.resetZoom();
   }
 
+  onZoom(direction: 'in' | 'out'): void {
+    if (direction === 'in') {
+      this.onZoomIn();
+    } else {
+      this.onZoomOut();
+    }
+  }
+
   onCanvasPan(delta: { dx: number; dy: number }): void {
     this.storyService.panViewBox(delta.dx, delta.dy);
   }
@@ -397,7 +408,6 @@ export class App implements OnInit {
     this._dragMoved = false;
     this._dragSnap = false;
     this.ghostText.set(choice.text);
-    this.hintVisible.set(false);
 
     const onMouseMove = (e: MouseEvent) => {
       if (!this._isDragging) return;

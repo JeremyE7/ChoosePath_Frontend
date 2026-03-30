@@ -11,18 +11,6 @@
 
   <!-- Shell -->
   <div class="shell">
-    <!-- Sidebar -->
-    <app-sidebar
-      [memoryLogEntries]="memoryLogEntries()"
-      [memoryCount]="memoryCount()"
-      [topScores]="topScores()"
-      [playerNickname]="playerNickname()"
-      [currentScore]="playerScore()"
-      [isGameActive]="gamePhase() === 'playing'"
-      (reset)="onReset()"
-      (export)="onExport()"
-    ></app-sidebar>
-
     <!-- Center: Tree Canvas -->
     <div class="center">
       <div class="tree-bar">
@@ -46,6 +34,7 @@
           </div>
         </div>
         <div class="zbtns">
+          <button class="zb new-game" (click)="onReset()">Nueva Partida</button>
           <button class="zb" (click)="onZoomIn()">+</button>
           <button class="zb" (click)="onZoomOut()">&minus;</button>
           <button class="zb" style="font-size: 0.46rem" (click)="onZoomFit()">fit</button>
@@ -61,6 +50,7 @@
         [ghostStubPaths]="ghostStubPaths()"
         (nodeClick)="onNodeClick($event)"
         (pan)="onCanvasPan($event)"
+        (zoom)="onZoom($event)"
       ></app-tree-canvas>
 
       @if (loading()) {

@@ -83,21 +83,9 @@ body {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(
-      ellipse 70% 60% at 15% 25%,
-      rgba(168, 210, 255, 0.45) 0%,
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse 60% 70% at 85% 15%,
-      rgba(200, 168, 255, 0.35) 0%,
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse 80% 50% at 70% 80%,
-      rgba(168, 240, 220, 0.35) 0%,
-      transparent 55%
-    ),
+    radial-gradient(ellipse 70% 60% at 15% 25%, rgba(168, 210, 255, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 70% at 85% 15%, rgba(200, 168, 255, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 70% 80%, rgba(168, 240, 220, 0.35) 0%, transparent 55%),
     radial-gradient(ellipse 50% 60% at 30% 75%, rgba(255, 210, 168, 0.3) 0%, transparent 55%),
     radial-gradient(ellipse 90% 90% at 50% 50%, rgba(240, 244, 255, 1) 0%, transparent 70%);
   animation: auroraShift 18s ease-in-out infinite alternate;
@@ -142,7 +130,7 @@ body {
 .shell {
   flex: 1;
   display: grid;
-  grid-template-columns: 200px 1fr 284px;
+  grid-template-columns: 1fr 284px;
   overflow: hidden;
   position: relative;
   z-index: 1;
@@ -150,11 +138,6 @@ body {
 }
 
 /* Make host elements fill their grid cell as flex columns */
-.shell > app-sidebar {
-  display: flex;
-  overflow: hidden;
-  min-height: 0;
-}
 .shell > .rp-wrap {
   min-height: 0;
 }
@@ -220,7 +203,8 @@ body {
 }
 .zbtns {
   display: flex;
-  gap: 3px;
+  gap: 6px;
+  align-items: center;
 }
 .zb {
   width: 26px;
@@ -242,6 +226,18 @@ body {
   border-color: var(--blue);
   color: var(--blue);
   background: var(--blue-s);
+}
+.zb.new-game {
+  width: auto;
+  padding: 0 12px;
+  font-size: 0.65rem;
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+.zb.new-game:hover {
+  background: var(--blue2);
+  color: white;
 }
 
 /* ════════════════════════════ RIGHT PANEL WRAPPER */
@@ -330,7 +326,9 @@ body {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .loading-text {
   font-family: var(--f-mono);
@@ -384,7 +382,9 @@ body {
   margin-bottom: 8px;
   transition: opacity 0.15s;
 }
-.death-btn:hover { opacity: 0.85; }
+.death-btn:hover {
+  opacity: 0.85;
+}
 .death-btn.save {
   background: linear-gradient(135deg, #4a7cf7, #6366f1);
   color: white;
@@ -410,10 +410,7 @@ body {
 
 @media (max-width: 860px) {
   .shell {
-    grid-template-columns: 0px 1fr 240px;
-  }
-  .shell > app-sidebar {
-    display: none;
+    grid-template-columns: 1fr 240px;
   }
   .rp-wrap app-narrative-panel {
     max-height: clamp(160px, 45vh, 340px);
@@ -424,9 +421,6 @@ body {
   .shell {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr auto;
-  }
-  .shell > app-sidebar {
-    display: none;
   }
   .rp-wrap {
     border-left: none;

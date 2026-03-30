@@ -3,6 +3,12 @@
   overflow: hidden;
   position: relative;
   cursor: grab;
+  /* Grid background */
+  background-color: var(--s1);
+  background-image:
+    linear-gradient(rgba(74, 124, 247, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 124, 247, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 .tree-canvas.panning,
 .tree-canvas.panning * {

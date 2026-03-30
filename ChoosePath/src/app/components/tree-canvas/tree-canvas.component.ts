@@ -4,8 +4,11 @@ import {
   output,
   signal,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   ElementRef,
   ViewChild,
+  HostListener,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -46,6 +49,8 @@ export interface TreeEdge {
   host: { '[class.panning]': 'isPanning()' },
 })
 export class TreeCanvasComponent {
+  private readonly cdr = inject(ChangeDetectorRef);
+
   @ViewChild('treeCanvas') treeCanvasRef!: ElementRef<HTMLElement>;
 
   treeNodes = input.required<TreeNode[]>();
@@ -58,11 +63,28 @@ export class TreeCanvasComponent {
   nodeClick = output<string>();
   /** Emits pan delta in SVG coordinate units */
   pan = output<{ dx: number; dy: number }>();
+  /** Emits zoom direction: 'in' or 'out' */
+  zoom = output<'in' | 'out'>();
 
   readonly isPanning = signal(false);
 
   private _lastX = 0;
   private _lastY = 0;
+
+  @HostListener('window:wheel', ['$event'])
+  onWheel(e: WheelEvent): void {
+    // Only handle Alt + scroll for zoom
+    if (e.altKey) {
+      console.log('Alt + scroll:', e.deltaY);
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        this.zoom.emit('in');
+      } else {
+        this.zoom.emit('out');
+      }
+      this.cdr.detectChanges();
+    }
+  }
 
   onNodeClick(nodeId: string): void {
     this.nodeClick.emit(nodeId);

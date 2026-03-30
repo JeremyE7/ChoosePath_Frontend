@@ -2,134 +2,138 @@
 <div class="aurora" aria-hidden="true"></div>
 
 @if (gamePhase() === 'start') {
-  <app-start-screen (gameStart)="onGameStart($event)"></app-start-screen>
-}
+<app-start-screen (gameStart)="onGameStart($event)"></app-start-screen>
+} @if (gamePhase() === 'playing' || gamePhase() === 'dead') {
+<!-- Header -->
+<app-header></app-header>
 
-@if (gamePhase() === 'playing' || gamePhase() === 'dead') {
-  <!-- Header -->
-  <app-header></app-header>
+<!-- Shell -->
+<div class="shell">
+  <!-- Center: Tree Canvas -->
+  <div class="center">
+    <div class="tree-bar">
+      <div class="bc">
+        <span class="bci">{{ storyTitle() || 'Historia' }}</span>
+        <span class="bcsep">&rsaquo;</span>
+        <span class="bci cur">{{ currentLabel() }}</span>
+      </div>
+      <div class="tstats">
+        <div class="tst">
+          <span class="tst-v">{{ nodeCount() }}</span>
+          <span class="tst-l">Nodos</span>
+        </div>
+        <div class="tst">
+          <span class="tst-v">{{ playerScore() }}</span>
+          <span class="tst-l">Score</span>
+        </div>
+        <div class="tst">
+          <span class="tst-v">{{ branches() }}</span>
+          <span class="tst-l">Ramas</span>
+        </div>
+      </div>
+      <div class="zbtns">
+        <button class="zb new-game" (click)="onReset()">Nueva Partida</button>
+        <button class="zb" (click)="onZoomIn()">+</button>
+        <button class="zb" (click)="onZoomOut()">&minus;</button>
+        <button class="zb" style="font-size: 0.46rem" (click)="onZoomFit()">fit</button>
+      </div>
+    </div>
 
-  <!-- Shell -->
-  <div class="shell">
-    <!-- Center: Tree Canvas -->
-    <div class="center">
-      <div class="tree-bar">
-        <div class="bc">
-          <span class="bci">{{ storyTitle() || 'Historia' }}</span>
-          <span class="bcsep">&rsaquo;</span>
-          <span class="bci cur">{{ currentLabel() }}</span>
+    <app-tree-canvas
+      [treeNodes]="treeNodes()"
+      [treeEdges]="treeEdges()"
+      [viewBoxString]="viewBoxString()"
+      [hintVisible]="hintVisible()"
+      [currentNodeChildren]="currentNodeChildren()"
+      [ghostStubPaths]="ghostStubPaths()"
+      [previewNodes]="previewNodes()"
+      [previewEdges]="previewEdges()"
+      [loadingNodeId]="loadingNodeId()"
+      (nodeClick)="onNodeClick($event)"
+      (previewClick)="onPreviewClick($event)"
+      (pan)="onCanvasPan($event)"
+      (zoom)="onZoom($event)"
+      style="height: 100%"
+    ></app-tree-canvas>
+
+    <!-- Only show global loading when NOT using preview nodes AND not in loading state for preview -->
+    @if (loading() && previewNodes().length === 0 && !loadingNodeId()) {
+    <div class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <span class="loading-text">La IA esta pensando...</span>
+    </div>
+    }
+  </div>
+
+  <!-- Right Panel -->
+  <div class="rp-wrap">
+    <app-narrative-panel
+      [currentLabel]="currentLabel()"
+      [currentScene]="currentScene()"
+      [currentEvents]="currentEvents()"
+      [depthPips]="depthPips()"
+      [depth]="maxDepth()"
+    ></app-narrative-panel>
+
+    @if (gamePhase() === 'dead') {
+    <div class="death-panel">
+      <div class="death-icon">
+        <lucide-icon name="skull" [size]="40" aria-hidden="true"></lucide-icon>
+      </div>
+      <h3 class="death-title">Tu historia termina aquí</h3>
+      <p class="death-narrator">{{ deathStats().narrator }} dice:</p>
+
+      <!-- Stats Grid -->
+      <div class="death-stats-grid">
+        <div class="death-stat">
+          <span class="stat-value">{{ deathStats().score }}</span>
+          <span class="stat-label">Puntuación</span>
         </div>
-        <div class="tstats">
-          <div class="tst">
-            <span class="tst-v">{{ nodeCount() }}</span>
-            <span class="tst-l">Nodos</span>
-          </div>
-          <div class="tst">
-            <span class="tst-v">{{ playerScore() }}</span>
-            <span class="tst-l">Score</span>
-          </div>
-          <div class="tst">
-            <span class="tst-v">{{ branches() }}</span>
-            <span class="tst-l">Ramas</span>
-          </div>
+        <div class="death-stat">
+          <span class="stat-value">{{ deathStats().nodes }}</span>
+          <span class="stat-label">Nodos</span>
         </div>
-        <div class="zbtns">
-          <button class="zb new-game" (click)="onReset()">Nueva Partida</button>
-          <button class="zb" (click)="onZoomIn()">+</button>
-          <button class="zb" (click)="onZoomOut()">&minus;</button>
-          <button class="zb" style="font-size: 0.46rem" (click)="onZoomFit()">fit</button>
+        <div class="death-stat">
+          <span class="stat-value">{{ deathStats().branches }}</span>
+          <span class="stat-label">Ramas</span>
+        </div>
+        <div class="death-stat">
+          <span class="stat-value">{{ deathStats().memories }}</span>
+          <span class="stat-label">Memorias</span>
         </div>
       </div>
 
-      <app-tree-canvas
-        [treeNodes]="treeNodes()"
-        [treeEdges]="treeEdges()"
-        [viewBoxString]="viewBoxString()"
-        [hintVisible]="hintVisible()"
-        [currentNodeChildren]="currentNodeChildren()"
-        [ghostStubPaths]="ghostStubPaths()"
-        (nodeClick)="onNodeClick($event)"
-        (pan)="onCanvasPan($event)"
-        (zoom)="onZoom($event)"
-      ></app-tree-canvas>
-
-      @if (loading()) {
-        <div class="loading-overlay">
-          <div class="loading-spinner"></div>
-          <span class="loading-text">La IA esta pensando...</span>
-        </div>
-      }
-    </div>
-
-    <!-- Right Panel -->
-    <div class="rp-wrap">
-      <app-narrative-panel
-        [currentLabel]="currentLabel()"
-        [currentScene]="currentScene()"
-        [currentEvents]="currentEvents()"
-        [depthPips]="depthPips()"
-        [depth]="maxDepth()"
-      ></app-narrative-panel>
-
-      @if (gamePhase() === 'dead') {
-        <div class="death-panel">
-          <div class="death-icon">
-            <lucide-icon name="skull" [size]="40" aria-hidden="true"></lucide-icon>
-          </div>
-          <h3 class="death-title">Tu historia termina aquí</h3>
-          <p class="death-narrator">{{ deathStats().narrator }} dice:</p>
-          
-          <!-- Stats Grid -->
-          <div class="death-stats-grid">
-            <div class="death-stat">
-              <span class="stat-value">{{ deathStats().score }}</span>
-              <span class="stat-label">Puntuación</span>
-            </div>
-            <div class="death-stat">
-              <span class="stat-value">{{ deathStats().nodes }}</span>
-              <span class="stat-label">Nodos</span>
-            </div>
-            <div class="death-stat">
-              <span class="stat-value">{{ deathStats().branches }}</span>
-              <span class="stat-label">Ramas</span>
-            </div>
-            <div class="death-stat">
-              <span class="stat-value">{{ deathStats().memories }}</span>
-              <span class="stat-label">Memorias</span>
-            </div>
-          </div>
-          
-          <p class="death-nickname">Jugador: {{ playerNickname() }}</p>
-          @if (!scoreSaved()) {
-            <button class="death-btn save" (click)="onSaveScore()">Guardar score</button>
-          } @else {
-            <p class="death-saved">Score guardado</p>
-          }
-          <button class="death-btn retry" (click)="onPlayAgain()">Nueva aventura</button>
-        </div>
+      <p class="death-nickname">Jugador: {{ playerNickname() }}</p>
+      @if (!scoreSaved()) {
+      <button class="death-btn save" (click)="onSaveScore()">Guardar score</button>
       } @else {
-        <app-choice-panel
-          [choices]="currentNodeChoices()"
-          [hasMemory]="hasMemoryFn"
-          (choiceDragStart)="onChoiceDragStart($event)"
-        ></app-choice-panel>
+      <p class="death-saved">Score guardado</p>
       }
+      <button class="death-btn retry" (click)="onPlayAgain()">Nueva aventura</button>
     </div>
+    } @else {
+    <app-choice-panel
+      [choices]="currentNodeChoices()"
+      [hasMemory]="hasMemoryFn"
+      (choiceDragStart)="onChoiceDragStart($event)"
+    ></app-choice-panel>
+    }
   </div>
+</div>
 
-  <!-- Memory Notifications -->
-  <app-memory-notification></app-memory-notification>
+<!-- Memory Notifications -->
+<app-memory-notification></app-memory-notification>
 
-  <!-- Ghost for drag preview -->
-  <div
-    id="ghost"
-    [class.snap]="ghostSnap()"
-    [style.display]="ghostVisible() ? 'block' : 'none'"
-    [style.left.px]="ghostPosition().x"
-    [style.top.px]="ghostPosition().y"
-  >
-    {{ ghostText() }}
-  </div>
+<!-- Ghost for drag preview -->
+<div
+  id="ghost"
+  [class.snap]="ghostSnap()"
+  [style.display]="ghostVisible() ? 'block' : 'none'"
+  [style.left.px]="ghostPosition().x"
+  [style.top.px]="ghostPosition().y"
+>
+  {{ ghostText() }}
+</div>
 }
 
 <!-- Toast - always in DOM for transitions -->

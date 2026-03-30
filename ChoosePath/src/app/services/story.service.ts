@@ -22,7 +22,7 @@ import type {
 } from '../../server/story.types';
 import { firstValueFrom } from 'rxjs';
 
-const DEFAULT_VIEWBOX: ViewBox = { x: -200, y: -40, w: 700, h: 500, width: 700, height: 500 };
+const DEFAULT_VIEWBOX: ViewBox = { x: -200, y: -40, w: 1100, h: 800, width: 1100, height: 800 };
 
 @Injectable({ providedIn: 'root' })
 export class StoryService {

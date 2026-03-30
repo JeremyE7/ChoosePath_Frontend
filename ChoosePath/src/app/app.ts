@@ -26,7 +26,7 @@ import { Choice, ScoreEntry } from './models/story.model';
 // Components
 import { HeaderComponent } from './components/header/header.component';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
-import { TreeCanvasComponent } from './components/tree-canvas/tree-canvas.component';
+import { TreeCanvasComponent, TreePreviewNode } from './components/tree-canvas/tree-canvas.component';
 import { NarrativePanelComponent } from './components/narrative-panel/narrative-panel.component';
 import { ChoicePanelComponent } from './components/choice-panel/choice-panel.component';
 import { MemoryNotificationComponent } from './components/memory-notification/memory-notification.component';
@@ -104,6 +104,9 @@ export class App implements OnInit {
   readonly toastVisible = signal(false);
   readonly toastMessage = signal('');
   readonly toastType = signal<'success' | 'error'>('success');
+
+  // Loading state for preview node selection
+  readonly loadingNodeId = signal<string | null>(null);
 
   // Hint - solo visible cuando no hay nodos o es el primer nodo
   readonly hintVisible = computed(() => {
@@ -307,6 +310,112 @@ export class App implements OnInit {
     });
   });
 
+  // Preview nodes - choice options shown directly on tree (same visual style as real nodes)
+  readonly previewNodes = computed<TreePreviewNode[]>(() => {
+    const choices = this.currentNodeChoices();
+    
+    // Don't show preview if no choices OR player is dead
+    // Note: We show preview even if node has children (they're the uncreated choices)
+    if (choices.length === 0 || this.isPlayerDead()) return [];
+
+    const currentPos = this.storyService.nodePositions()[this.storyService.currentNodeId()];
+    if (!currentPos) return [];
+
+    // Use same tree config as real nodes
+    const NW = 122;
+    const NH = 33;
+    const H_GAP = 42;
+    const V_GAP = 70;
+    const currentDepth = this.maxDepth();
+    const nextDepth = currentDepth + 1;
+    
+    const COLORS = [
+      { fill: 'rgba(74,124,247,.12)', stroke: '#4a7cf7', txt: '#2556e0' },
+      { fill: 'rgba(14,184,160,.1)', stroke: '#0eb8a0', txt: '#087060' },
+      { fill: 'rgba(139,92,246,.1)', stroke: '#8b5cf6', txt: '#6030c0' },
+      { fill: 'rgba(245,158,11,.1)', stroke: '#f59e0b', txt: '#a06000' },
+      { fill: 'rgba(240,86,122,.1)', stroke: '#f0567a', txt: '#b03050' },
+      { fill: 'rgba(16,185,129,.1)', stroke: '#10b981', txt: '#077050' },
+    ];
+    
+    const color = COLORS[nextDepth % COLORS.length];
+    
+    // Center X - position relative to parent center
+    const parentCenterX = currentPos.x + NW / 2;
+
+    // Calculate total width for children and center them under parent
+    const totalWidth = choices.length * NW + (choices.length - 1) * H_GAP;
+    const startX = parentCenterX - totalWidth / 2;
+
+    const loadingId = this.loadingNodeId();
+    
+    return choices.map((choice, i) => {
+      // Same positioning logic as real tree nodes
+      const x = startX + i * (NW + H_GAP);
+      // Position below parent node - all at same Y level
+      const y = currentPos.y + NH + 50;
+      
+      const isLoading = loadingId !== null;
+      const isThisLoading = loadingId === `preview-${choice.key}`;
+
+      return {
+        id: `preview-${choice.key}`,
+        choiceKey: choice.key,
+        choice,
+        label: choice.text,
+        displayLabel: choice.text.length > 14 ? choice.text.slice(0, 13) + '...' : choice.text,
+        depth: nextDepth,
+        x,
+        y,
+        width: NW,
+        height: NH,
+        color,
+        fill: isThisLoading ? color.fill : (isLoading ? 'rgba(255,255,255,0.25)' : color.fill),
+        stroke: color.stroke,
+        strokeWidth: isThisLoading ? '2.2' : '1.4',
+        textFill: isThisLoading ? color.txt : (isLoading ? 'rgba(0,0,0,0.3)' : color.txt),
+        isSelected: isThisLoading,
+        isDisabled: isLoading && !isThisLoading,
+      };
+    });
+  });
+
+  // Preview edges - connections from parent to preview nodes
+  readonly previewEdges = computed(() => {
+    const previews = this.previewNodes();
+    if (previews.length === 0) return [];
+
+    const currentPos = this.storyService.nodePositions()[this.storyService.currentNodeId()];
+    if (!currentPos) return [];
+
+    const NW = 122;
+    const NH = 33;
+    
+    // Start from bottom center of current node (parent)
+    const fromX = currentPos.x + NW / 2;
+    const fromY = currentPos.y + NH;
+
+    const edges = previews.map((preview, i) => {
+      // End at top center of preview node
+      const endX = preview.x + NW / 2;
+      const endY = preview.y;
+      
+      // Curved bezier line - same style as real tree edges
+      const midY = (fromY + endY) / 2;
+      const path = `M${fromX},${fromY} C${fromX},${midY} ${endX},${midY} ${endX},${endY}`;
+      
+      return {
+        id: `preview-edge-${preview.choiceKey}`,
+        path,
+        stroke: '#4a7cf7', // Same blue as regular edges on path
+        strokeWidth: '1.8',
+        markerEnd: 'url(#ahb)',
+        isNew: false, // Don't use animation - just show normally
+      };
+    });
+    return edges;
+  });
+
   hasMemoryFn = (text: string): boolean => {
     return this.memoryService.hasMem(text);
   };
@@ -458,6 +567,14 @@ export class App implements OnInit {
     return;
   }
 
+  /** Handle click on a preview/choice node shown on tree */
+  onPreviewClick(choice: Choice): void {
+    if (this.loading() || this.isPlayerDead()) return;
+    // Set loading state on the clicked preview node
+    this.loadingNodeId.set(`preview-${choice.key}`);
+    this.commitChoice(choice);
+  }
+
   onChoiceDragStart(choice: Choice): void {
     if (this.loading() || this.isPlayerDead()) return;
 
@@ -551,35 +668,40 @@ export class App implements OnInit {
     if (!choice.nextNodeId || this.loading()) return;
     console.log(choice);
 
-    const newId = await this.storyService.commitChoice(choice, (error: string) => {
-      this.showToast(error, 'error');
-    });
-    if (!newId) return;
-
-    const node = this.storyService.nodes()[newId];
-    if (node) {
-      const evs = node.events || [];
-      node.memoryKeys?.forEach((k, i) => {
-        const ev = evs[i] || evs[0];
-        if (ev && ev.who && ev.description) {
-          this.memoryService.addMem(k, ev.who, ev.description, node.id);
-        }
+    try {
+      const newId = await this.storyService.commitChoice(choice, (error: string) => {
+        this.showToast(error, 'error');
       });
+      if (!newId) return;
 
-      if (node.isDeath) {
-        this.gamePhase.set('dead');
-        const deathMessage = this.narratorService.getDeathMessage();
-        this.showToast(deathMessage + ' Score: ' + this.playerScore());
-      } else {
-        // Record safe choice for racha
-        this.narratorService.recordSafeChoice();
-        
-        const advanceMessage = this.narratorService.getAdvanceMessage();
-        this.showToast(`"${node.label}" - ${advanceMessage}`);
+      const node = this.storyService.nodes()[newId];
+      if (node) {
+        const evs = node.events || [];
+        node.memoryKeys?.forEach((k, i) => {
+          const ev = evs[i] || evs[0];
+          if (ev && ev.who && ev.description) {
+            this.memoryService.addMem(k, ev.who, ev.description, node.id);
+          }
+        });
+
+        if (node.isDeath) {
+          this.gamePhase.set('dead');
+          const deathMessage = this.narratorService.getDeathMessage();
+          this.showToast(deathMessage + ' Score: ' + this.playerScore());
+        } else {
+          // Record safe choice for racha
+          this.narratorService.recordSafeChoice();
+          
+          const advanceMessage = this.narratorService.getAdvanceMessage();
+          this.showToast(`"${node.label}" - ${advanceMessage}`);
+        }
       }
-    }
 
-    setTimeout(() => this.storyService.centerOn(newId), 80);
+      setTimeout(() => this.storyService.centerOn(newId), 80);
+    } finally {
+      // Clear loading state from preview node
+      this.loadingNodeId.set(null);
+    }
   }
 
   onReset(): void {

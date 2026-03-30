@@ -2,6 +2,7 @@
   flex: 1;
   overflow: hidden;
   position: relative;
+  height: 100%;
   cursor: grab;
   /* Grid background */
   background-color: var(--s1);
@@ -38,10 +39,6 @@
 @keyframes wireIn {
   from {
     stroke-dashoffset: 500;
-    opacity: 0;
-  }
-  5% {
-    opacity: 1;
   }
   to {
     stroke-dashoffset: 0;
@@ -66,7 +63,6 @@
 .new-edge {
   stroke-dasharray: 500;
   stroke-dashoffset: 500;
-  opacity: 0;
   animation: wireIn 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -113,4 +109,60 @@
 .hint-s {
   font-size: 0.86rem;
   color: var(--ink3);
+}
+
+/* Preview nodes (choice options on tree) */
+.preview-node {
+  cursor: pointer;
+}
+
+.preview-node rect {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.preview-node text {
+  transition: opacity 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Outer ring - transitions opacity */
+.preview-node .preview-ring {
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.preview-node.selected .preview-ring {
+  opacity: 1;
+}
+
+.preview-node:hover:not(.disabled):not(.loading) rect:not(.preview-ring) {
+  stroke-width: 2.5 !important;
+}
+
+.preview-node.selected rect:not(.preview-ring) {
+  stroke-width: 2.5 !important;
+}
+
+.preview-node.disabled {
+  cursor: not-allowed;
+}
+
+.preview-node.disabled rect:not(.preview-ring) {
+  opacity: 0.35 !important;
+}
+
+.preview-node.disabled text {
+  opacity: 0.35 !important;
+}
+
+.preview-node.loading {
+  cursor: wait;
+}
+
+/* Remove default focus outline */
+.preview-node:focus {
+  outline: none;
+}
+
+.preview-node:focus rect:not(.preview-ring) {
+  stroke-width: 2.5 !important;
 }

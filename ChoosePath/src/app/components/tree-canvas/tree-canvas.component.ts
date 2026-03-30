@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
+import { Choice } from '../../models/story.model';
 
 export interface TreeNode {
   id: string;
@@ -41,6 +42,27 @@ export interface TreeEdge {
   isNew: boolean;
 }
 
+/** Preview node - choice option shown on tree before selection */
+export interface TreePreviewNode {
+  id: string;
+  choiceKey: string;
+  choice: Choice;
+  label: string;
+  displayLabel: string;
+  depth: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: { fill: string; stroke: string; txt: string };
+  fill: string;
+  stroke: string;
+  strokeWidth: string;
+  textFill: string;
+  isSelected: boolean;
+  isDisabled: boolean;
+}
+
 @Component({
   selector: 'app-tree-canvas',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,8 +82,16 @@ export class TreeCanvasComponent {
   hintVisible = input.required<boolean>();
   currentNodeChildren = input.required<string[]>();
   ghostStubPaths = input.required<string[]>();
+  
+  // Preview nodes - choice options shown on tree before selection
+  previewNodes = input<TreePreviewNode[]>([]);
+  previewEdges = input<TreeEdge[]>([]);
+  /** ID of the preview node that is currently loading (being selected) */
+  loadingNodeId = input<string | null>(null);
 
   nodeClick = output<string>();
+  /** Emits when user clicks on a preview/choice node on the tree */
+  previewClick = output<Choice>();
   /** Emits pan delta in SVG coordinate units */
   pan = output<{ dx: number; dy: number }>();
   /** Emits zoom direction: 'in' or 'out' */
@@ -89,6 +119,11 @@ export class TreeCanvasComponent {
 
   onNodeClick(nodeId: string): void {
     this.nodeClick.emit(nodeId);
+  }
+
+  onPreviewClick(preview: TreePreviewNode): void {
+    if (preview.isDisabled) return;
+    this.previewClick.emit(preview.choice);
   }
 
   onSvgMouseDown(e: MouseEvent): void {

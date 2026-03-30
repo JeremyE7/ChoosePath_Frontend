@@ -149,8 +149,8 @@
         </g>
       }
 
-      <!-- Ghost stubs from current leaf -->
-      @if (currentNodeChildren().length === 0 && ghostStubPaths().length > 0) {
+      <!-- Ghost stubs - only show if NO preview nodes (fallback) -->
+      @if (currentNodeChildren().length === 0 && ghostStubPaths().length > 0 && previewNodes().length === 0) {
         @for (path of ghostStubPaths(); track $index) {
           <path
             [attr.d]="path"
@@ -161,6 +161,74 @@
             marker-end="url(#ahg)"
           />
         }
+      }
+    </g>
+    
+    <!-- Preview edges (connections to choice options) -->
+    <g id="previewEdges">
+      @for (edge of previewEdges(); track edge.id) {
+        <path
+          [attr.d]="edge.path"
+          fill="none"
+          [attr.stroke]="edge.stroke"
+          [attr.stroke-width]="edge.strokeWidth"
+          [attr.marker-end]="edge.markerEnd"
+          [class.new-edge]="edge.isNew"
+        />
+      }
+    </g>
+    
+    <!-- Preview nodes (choice options shown on tree) -->
+    <g id="previewNodes">
+      @for (node of previewNodes(); track node.id) {
+        <g
+          [attr.data-id]="node.id"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="node.label + (node.isSelected ? ' (seleccionado)' : node.isDisabled ? ' (deshabilitado)' : '')"
+          (click)="onPreviewClick(node)"
+          class="tree-node preview-node"
+          [class.selected]="node.isSelected"
+          [class.disabled]="node.isDisabled"
+          [class.loading]="loadingNodeId() === node.id"
+        >
+          <!-- Outer ring - always rendered but opacity transitions -->
+          <rect
+            [attr.x]="node.x - 4"
+            [attr.y]="node.y - 4"
+            [attr.width]="node.width + 8"
+            [attr.height]="node.height + 8"
+            rx="10"
+            fill="none"
+            [attr.stroke]="node.color.stroke"
+            stroke-width="1.8"
+            class="preview-ring"
+          />
+          <rect
+            [attr.x]="node.x"
+            [attr.y]="node.y"
+            [attr.width]="node.width"
+            [attr.height]="node.height"
+            rx="8"
+            [attr.fill]="node.fill"
+            [attr.stroke]="node.stroke"
+            [attr.stroke-width]="node.strokeWidth"
+          />
+
+          <text
+            [attr.x]="node.x + node.width / 2"
+            [attr.y]="node.y + node.height / 2 + 1"
+            text-anchor="middle"
+            dominant-baseline="central"
+            [attr.fill]="node.textFill"
+            font-size="10"
+            [attr.font-weight]="node.isSelected ? '700' : '500'"
+            font-family="Plus Jakarta Sans, sans-serif"
+            letter-spacing="0.01em"
+          >
+            {{ node.displayLabel }}
+          </text>
+        </g>
       }
     </g>
   </svg>

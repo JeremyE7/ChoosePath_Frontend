@@ -29,9 +29,6 @@ export class StoryService {
   private readonly storyDataService = inject(StoryDataService);
   private readonly memoryService = inject(MemoryService);
 
-  /** Loaded story templates (the "database" of available nodes) */
-  private storyData: StoryData | null = null;
-
   /** Story config for /continue calls */
   private storyConfig: Partial<GenerateRequest> = {};
 
@@ -90,6 +87,7 @@ export class StoryService {
         this._initFromLoadedData();
         this._loaded.set(true);
         this._loading.set(false);
+        this.saveGameState(); // Auto-save after loading
       },
       error: (err) => {
         console.error('Failed to load story:', err);
@@ -149,8 +147,8 @@ export class StoryService {
   async commitChoice(choice: Choice): Promise<string> {
     const parent = this.currentNode();
     const data = this._storyData();
-    console.log(choice);
     if (!parent || !data || !choice.nextNodeId) return '';
+    console.log('Committing choice:', choice);
 
     // Check if a child for this choice already exists (backtracking scenario)
     const existingChildId = this._findExistingChild(parent, choice.nextNodeId);
@@ -158,6 +156,7 @@ export class StoryService {
       console.log('Found existing child node for choice, navigating to it:', existingChildId);
       this._currentNodeId.set(existingChildId);
       this._centerViewOnNode(existingChildId);
+      this.saveGameState(); // Auto-save after navigation
       return existingChildId;
     }
 
@@ -166,7 +165,7 @@ export class StoryService {
 
     // Check if template exists locally (pre-generated nodes)
     const template = data.nodes[choice.nextNodeId];
-    if (template && !isDeath) {
+    if (template && !isDeath && template.choices.length > 0) {
       console.log('Found local template for choice, creating node from it:', choice.nextNodeId);
       return this._createNodeFromTemplate(parent, template, depth);
     }
@@ -198,6 +197,9 @@ export class StoryService {
 
     if (newNode.isDeath) {
       this._isPlayerDead.set(true);
+      this.clearSavedGame(); // Clear saved game when player dies
+    } else {
+      this.saveGameState(); // Auto-save after creating new node
     }
 
     return newId;
@@ -269,8 +271,11 @@ export class StoryService {
     const nodes = this._nodes();
     const data = this._storyData();
     for (const childId of parent.childIds) {
+      console.log('Checking existing child node:', childId);
+      console.log(childId, 'vs template', data?.nodes[templateNodeId]);
       const child = nodes[childId];
       if (child && child.label) {
+        console.log(child, 'vs template', data?.nodes[templateNodeId]);
         const template = data?.nodes[templateNodeId];
         if (template && child.label === template.label) {
           return childId;
@@ -551,4 +556,135 @@ export class StoryService {
 
     return edges;
   }
+
+  // ==========================================================================
+  // LOCALSTORAGE SAVE/RESTORE
+  // ==========================================================================
+
+  private static readonly STORAGE_KEY = 'choosepath_game_state';
+
+  /**
+   * Check if there's a saved game in localStorage
+   */
+  hasSavedGame(): boolean {
+    const saved = localStorage.getItem(StoryService.STORAGE_KEY);
+    if (!saved) return false;
+
+    try {
+      const state = JSON.parse(saved) as GameState;
+      // Don't restore if player is dead
+      return !state.isPlayerDead;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Save current game state to localStorage
+   */
+  saveGameState(): void {
+    // Don't save if player is dead or game hasn't started
+    if (this._isPlayerDead() || !this._loaded()) return;
+
+    const state: GameState = {
+      storyData: this._storyData(),
+      nodes: this._nodes(),
+      currentNodeId: this._currentNodeId(),
+      nodePositions: this._nodePositions(),
+      nodeCount: this._nodeCount(),
+      maxDepth: this._maxDepth(),
+      branchCount: this._branchCount(),
+      maxDepthEverReached: this._maxDepthEverReached(),
+      storyConfig: this.storyConfig,
+      memories: this.memoryService.getAllMemories(),
+      isPlayerDead: this._isPlayerDead(),
+      savedAt: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(StoryService.STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Failed to save game state:', e);
+    }
+  }
+
+  /**
+   * Restore game state from localStorage
+   * Returns true if restore was successful
+   */
+  restoreGameState(): boolean {
+    const saved = localStorage.getItem(StoryService.STORAGE_KEY);
+    if (!saved) return false;
+
+    try {
+      const state = JSON.parse(saved) as GameState;
+
+      // Don't restore if player is dead
+      if (state.isPlayerDead) {
+        this.clearSavedGame();
+        return false;
+      }
+
+      // Restore all state
+      if (state.storyData) {
+        this._storyData.set(state.storyData);
+      }
+
+      this.storyConfig = state.storyConfig || {};
+      this._nodes.set(state.nodes || {});
+      this._currentNodeId.set(state.currentNodeId || 'root');
+      this._nodePositions.set(state.nodePositions || {});
+      this._nodeCount.set(state.nodeCount || 1);
+      this._maxDepth.set(state.maxDepth || 0);
+      this._branchCount.set(state.branchCount || 0);
+      this._maxDepthEverReached.set(state.maxDepthEverReached || 0);
+      this._loaded.set(true);
+      this._isPlayerDead.set(false);
+
+      // Restore memories
+      if (state.memories) {
+        this.memoryService.clearMemories();
+        for (const mem of state.memories) {
+          this.memoryService.addMem(mem.key || mem.who, mem.who, mem.txt, mem.nodeId);
+        }
+      }
+
+      return true;
+    } catch (e) {
+      console.warn('Failed to restore game state:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Clear saved game from localStorage
+   */
+  clearSavedGame(): void {
+    localStorage.removeItem(StoryService.STORAGE_KEY);
+  }
+
+  /**
+   * Get story config (for saving)
+   */
+  getStoryConfig(): Partial<GenerateRequest> {
+    return this.storyConfig;
+  }
+}
+
+/**
+ * Interface for persisted game state
+ */
+interface GameState {
+  storyData: StoryData | null;
+  nodes: Record<string, StoryNode>;
+  currentNodeId: string;
+  nodePositions: Record<string, NodePosition>;
+  nodeCount: number;
+  maxDepth: number;
+  branchCount: number;
+  maxDepthEverReached: number;
+  storyConfig: Partial<GenerateRequest>;
+  memories: Array<{ key?: string; who: string; txt: string; nodeId: string }>;
+  isPlayerDead: boolean;
+  savedAt: number;
 }

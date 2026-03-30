@@ -275,6 +275,22 @@ export class App implements OnInit {
 
   ngOnInit(): void {
     this._loadTopScores();
+    this._tryRestoreGame();
+  }
+
+  private _tryRestoreGame(): void {
+    if (this.storyService.hasSavedGame()) {
+      const restored = this.storyService.restoreGameState();
+      if (restored) {
+        // Restore player info from localStorage
+        const savedNickname = localStorage.getItem('choosepath_player_nickname');
+        if (savedNickname) {
+          this.playerNickname.set(savedNickname);
+          this.gamePhase.set('playing');
+          this.scoreSaved.set(false);
+        }
+      }
+    }
   }
 
   // ==========================================================================
@@ -285,6 +301,13 @@ export class App implements OnInit {
     this.playerNickname.set(data.nickname);
     this.gamePhase.set('playing');
     this.scoreSaved.set(false);
+
+    // Clear any previous saved game before starting new one
+    this.storyService.clearSavedGame();
+
+    // Save nickname for restoration
+    localStorage.setItem('choosepath_player_nickname', data.nickname);
+
     this.storyService.loadStory({
       genre: data.genre,
       language: 'Español',
@@ -314,7 +337,9 @@ export class App implements OnInit {
   onPlayAgain(): void {
     this.gamePhase.set('start');
     this.storyService.resetStory();
+    this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
+    localStorage.removeItem('choosepath_player_nickname');
   }
 
   private _loadTopScores(): void {
@@ -471,6 +496,7 @@ export class App implements OnInit {
 
   onReset(): void {
     this.storyService.resetStory();
+    this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
     this.scoreSaved.set(false);
     this.gamePhase.set('playing');

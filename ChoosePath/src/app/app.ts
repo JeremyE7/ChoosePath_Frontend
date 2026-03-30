@@ -7,12 +7,16 @@ import {
   signal,
   computed,
   inject,
+  effect,
   OnInit,
   ChangeDetectionStrategy,
   ViewChild,
+  PLATFORM_ID,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
+import gsap from 'gsap';
 import { StoryService } from './services/story.service';
 import { MemoryService } from './services/memory.service';
 import { ScoreService } from './services/score.service';
@@ -51,6 +55,7 @@ export class App implements OnInit {
   private readonly storyService = inject(StoryService);
   private readonly memoryService = inject(MemoryService);
   private readonly scoreService = inject(ScoreService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   @ViewChild(TreeCanvasComponent) treeCanvasComponent!: TreeCanvasComponent;
 
@@ -100,8 +105,26 @@ export class App implements OnInit {
 
   // Hint - solo visible cuando no hay nodos o es el primer nodo
   readonly hintVisible = computed(() => {
-    // Solo mostrar hint si hay 1 nodo (el root) y no se ha hecho ninguna elección
     return this.nodeCount() <= 1 && this.gamePhase() === 'playing';
+  });
+
+  private readonly _deathAnimation = effect(() => {
+    if (this.gamePhase() !== 'dead' || !isPlatformBrowser(this.platformId)) return;
+    queueMicrotask(() => {
+      const panel = document.querySelector('.death-panel');
+      if (!panel) return;
+      const icon = panel.querySelector('.death-icon');
+      const title = panel.querySelector('.death-title');
+      const details = panel.querySelectorAll('.death-score, .death-nickname');
+      const btns = panel.querySelectorAll('.death-btn');
+
+      gsap.timeline()
+        .from(panel, { opacity: 0, duration: 0.2 })
+        .from(icon, { scale: 0, rotation: -15, duration: 0.55, ease: 'back.out(2)' }, '-=0.1')
+        .from(title, { y: 12, opacity: 0, duration: 0.3 }, '-=0.25')
+        .from(details, { y: 8, opacity: 0, stagger: 0.08, duration: 0.25 }, '-=0.15')
+        .from(btns, { y: 8, opacity: 0, stagger: 0.1, duration: 0.3 }, '-=0.1');
+    });
   });
 
   // ==========================================================================
@@ -305,29 +328,51 @@ export class App implements OnInit {
 
   onGameStart(data: { nickname: string; theme: string; genre: string; tone: string }): void {
     this.playerNickname.set(data.nickname);
-    this.gamePhase.set('playing');
     this.scoreSaved.set(false);
 
-    // Clear everything before starting new game
+    if (isPlatformBrowser(this.platformId)) {
+      const landing = document.querySelector('.landing');
+      if (landing) {
+        gsap.to(landing, {
+          opacity: 0,
+          scale: 0.97,
+          duration: 0.35,
+          ease: 'power2.in',
+          onComplete: () => this._initGame(data),
+        });
+        return;
+      }
+    }
+    this._initGame(data);
+  }
+
+  private _initGame(data: { nickname: string; theme: string; genre: string; tone: string }): void {
+    this.gamePhase.set('playing');
     this.storyService.clearSavedGame();
     this.storyService.resetStory();
     this.memoryService.clearMemories();
-
-    // Save nickname for restoration
     localStorage.setItem('choosepath_player_nickname', data.nickname);
 
     this.storyService.loadStory(
-      {
-        genre: data.genre,
-        language: 'Español',
-        theme: data.theme,
-        tone: data.tone,
-      },
+      { genre: data.genre, language: 'Español', theme: data.theme, tone: data.tone },
       (error: string) => {
         this.showToast(error, 'error');
         this.gamePhase.set('start');
       },
     );
+
+    if (isPlatformBrowser(this.platformId)) {
+      setTimeout(() => {
+        const header = document.querySelector('app-header');
+        const treebar = document.querySelector('.tree-bar');
+        const rpWrap = document.querySelector('.rp-wrap');
+
+        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+        if (header) tl.from(header, { y: -36, opacity: 0, duration: 0.42 });
+        if (treebar) tl.from(treebar, { y: -10, opacity: 0, duration: 0.32 }, '-=0.22');
+        if (rpWrap) tl.from(rpWrap, { x: 22, opacity: 0, duration: 0.42 }, '-=0.28');
+      }, 80);
+    }
   }
 
   onSaveScore(): void {

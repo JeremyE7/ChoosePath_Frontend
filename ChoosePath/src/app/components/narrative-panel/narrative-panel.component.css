@@ -188,7 +188,3 @@
     transform: translateY(0);
   }
 }
-.nscene,
-.ev-list {
-  animation: fadeUp 0.3s var(--ease-out) both;
-}

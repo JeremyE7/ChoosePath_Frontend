@@ -1,7 +1,19 @@
-import { Component, output, signal, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  output,
+  signal,
+  inject,
+  ElementRef,
+  ChangeDetectionStrategy,
+  OnInit,
+  AfterViewInit,
+  PLATFORM_ID,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import gsap from 'gsap';
 import { ScoreService } from '../../services/score.service';
 import type { ScoreEntry } from '../../models/story.model';
 
@@ -662,8 +674,10 @@ import type { ScoreEntry } from '../../models/story.model';
     `,
   ],
 })
-export class StartScreenComponent implements OnInit {
+export class StartScreenComponent implements OnInit, AfterViewInit {
   private readonly scoreService = inject(ScoreService);
+  private readonly el = inject(ElementRef);
+  private readonly platformId = inject(PLATFORM_ID);
 
   gameStart = output<{ nickname: string; theme: string; genre: string; tone: string }>();
 
@@ -676,6 +690,20 @@ export class StartScreenComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTopScores();
+  }
+
+  ngAfterViewInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const r = this.el.nativeElement;
+
+    const defaults = { ease: 'power3.out', clearProps: 'all' };
+    const tl = gsap.timeline({ defaults });
+    tl.from(r.querySelector('.logo-orb'), { scale: 0, opacity: 0, duration: 0.5, ease: 'back.out(2)', clearProps: 'all' })
+      .from(r.querySelector('.hero-title'), { y: 22, opacity: 0, duration: 0.42 }, '-=0.32')
+      .from(r.querySelector('.hero-desc'), { y: 16, opacity: 0, duration: 0.38 }, '-=0.22')
+      .from(r.querySelector('.cta-badge'), { y: 12, opacity: 0, duration: 0.32 }, '-=0.18')
+      .from(r.querySelector('.hero-form'), { y: 16, opacity: 0, duration: 0.4 }, '-=0.14')
+      .from(r.querySelector('.scoreboard-card'), { x: 28, opacity: 0, duration: 0.55, ease: 'power2.out', clearProps: 'all' }, 0.18);
   }
 
   private loadTopScores(): void {

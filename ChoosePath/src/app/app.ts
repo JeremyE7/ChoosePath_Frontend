@@ -94,6 +94,7 @@ export class App implements OnInit {
   // Toast
   readonly toastVisible = signal(false);
   readonly toastMessage = signal('');
+  readonly toastType = signal<'success' | 'error'>('success');
 
   // Hint
   readonly hintVisible = signal(true);
@@ -302,18 +303,26 @@ export class App implements OnInit {
     this.gamePhase.set('playing');
     this.scoreSaved.set(false);
 
-    // Clear any previous saved game before starting new one
+    // Clear everything before starting new game
     this.storyService.clearSavedGame();
+    this.storyService.resetStory();
+    this.memoryService.clearMemories();
 
     // Save nickname for restoration
     localStorage.setItem('choosepath_player_nickname', data.nickname);
 
-    this.storyService.loadStory({
-      genre: data.genre,
-      language: 'Español',
-      theme: data.theme,
-      tone: data.tone,
-    });
+    this.storyService.loadStory(
+      {
+        genre: data.genre,
+        language: 'Español',
+        theme: data.theme,
+        tone: data.tone,
+      },
+      (error: string) => {
+        this.showToast(error, 'error');
+        this.gamePhase.set('start');
+      },
+    );
   }
 
   onSaveScore(): void {
@@ -329,7 +338,7 @@ export class App implements OnInit {
         },
         error: (err) => {
           console.error('Failed to save score:', err);
-          this.showToast('Error al guardar score');
+          this.showToast('Error al guardar score. Intenta nuevamente.', 'error');
         },
       });
   }
@@ -469,7 +478,9 @@ export class App implements OnInit {
     if (!choice.nextNodeId || this.loading()) return;
     console.log(choice);
 
-    const newId = await this.storyService.commitChoice(choice);
+    const newId = await this.storyService.commitChoice(choice, (error: string) => {
+      this.showToast(error, 'error');
+    });
     if (!newId) return;
 
     const node = this.storyService.nodes()[newId];
@@ -507,8 +518,10 @@ export class App implements OnInit {
     this.showToast('Exportando historia...');
   }
 
-  private showToast(msg: string): void {
+  private showToast(msg: string, type: 'success' | 'error' = 'success'): void {
+    console.log('Toast:', msg, type);
     this.toastMessage.set(msg);
+    this.toastType.set(type);
     this.toastVisible.set(true);
     setTimeout(() => this.toastVisible.set(false), 2400);
   }

@@ -23,14 +23,19 @@
     } @else {
       @for (score of topScores(); track score._id; let i = $index) {
         <div class="sb-row" [class.on]="score.nickname === playerNickname()" tabindex="0">
-          <div class="sb-rank" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+          <div
+            class="sb-rank"
+            [class.gold]="i === 0"
+            [class.silver]="i === 1"
+            [class.bronze]="i === 2"
+          >
             {{ i + 1 }}
           </div>
           <div class="sb-row-info">
             <div class="sb-row-t">{{ score.nickname }}</div>
             <div class="sb-row-m">
               <span class="gdot" [style.background]="i < 3 ? 'var(--blue)' : 'var(--ink5)'"></span>
-              <span>{{ score.storyTitle | slice:0:20 }}</span>
+              <span>{{ score.storyTitle | slice: 0 : 20 }}</span>
             </div>
           </div>
           <div class="sb-score-val">{{ score.score }}</div>
@@ -44,7 +49,7 @@
     <div class="mem-log-hd">Memorias activas</div>
     <div class="mem-log-content">
       @if (memoryLogEntries().length === 0) {
-        <span class="mem-txt" style="font-size:.7rem;color:var(--ink5)">Sin memorias aun.</span>
+        <span class="mem-txt" style="font-size: 0.7rem; color: var(--ink5)">Sin memorias aun.</span>
       } @else {
         @for (entry of memoryLogEntries(); track entry.who) {
           <div class="mem-entry">
@@ -57,7 +62,7 @@
   </div>
 
   <div class="sb-foot">
-    <button class="sb-btn" (click)="reset.emit()">Reiniciar</button>
+    <button class="sb-btn" (click)="reset.emit()">Nueva Partida</button>
     <button class="sb-btn b" (click)="export.emit()">Export</button>
   </div>
 </aside>

@@ -13,4 +13,5 @@ export class ToastComponent {
   // Use input() for reactive inputs
   visible = input.required<boolean>();
   message = input.required<string>();
+  type = input<'success' | 'error'>('success');
 }

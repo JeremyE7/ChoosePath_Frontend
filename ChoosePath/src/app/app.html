@@ -48,7 +48,7 @@
         <div class="zbtns">
           <button class="zb" (click)="onZoomIn()">+</button>
           <button class="zb" (click)="onZoomOut()">&minus;</button>
-          <button class="zb" style="font-size:.46rem" (click)="onZoomFit()">fit</button>
+          <button class="zb" style="font-size: 0.46rem" (click)="onZoomFit()">fit</button>
         </div>
       </div>
 
@@ -85,7 +85,9 @@
         <div class="death-panel">
           <div class="death-icon">&#9760;</div>
           <h3 class="death-title">Has muerto</h3>
-          <p class="death-score">Score final: <strong>{{ playerScore() }}</strong></p>
+          <p class="death-score">
+            Score final: <strong>{{ playerScore() }}</strong>
+          </p>
           <p class="death-nickname">Jugador: {{ playerNickname() }}</p>
           @if (!scoreSaved()) {
             <button class="death-btn save" (click)="onSaveScore()">Guardar score</button>
@@ -117,7 +119,7 @@
   >
     {{ ghostText() }}
   </div>
-
-  <!-- Toast -->
-  <app-toast [visible]="toastVisible()" [message]="toastMessage()"></app-toast>
 }
+
+<!-- Toast - always in DOM for transitions -->
+<app-toast [visible]="toastVisible()" [message]="toastMessage()" [type]="toastType()"></app-toast>

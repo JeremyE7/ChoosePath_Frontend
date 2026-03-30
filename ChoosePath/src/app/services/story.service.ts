@@ -48,6 +48,7 @@ export class StoryService {
   private readonly _isPlayerDead = signal<boolean>(false);
   private readonly _maxDepthEverReached = signal<number>(0);
   private readonly _storyData = signal<StoryData | null>(null);
+  private readonly _error = signal<string | null>(null);
 
   // ==========================================================================
   // PUBLIC READONLY SIGNALS
@@ -64,6 +65,7 @@ export class StoryService {
   readonly loading = this._loading.asReadonly();
   readonly isPlayerDead = this._isPlayerDead.asReadonly();
   readonly maxDepthEverReached = this._maxDepthEverReached.asReadonly();
+  readonly error = this._error.asReadonly();
 
   // ==========================================================================
   // COMPUTED VALUES
@@ -78,7 +80,7 @@ export class StoryService {
   // INITIALIZATION
   // ==========================================================================
 
-  loadStory(storyTheme: Partial<GenerateRequest>): void {
+  loadStory(storyTheme: Partial<GenerateRequest>, onError?: (error: string) => void): void {
     this.storyConfig = storyTheme;
     this._loading.set(true);
     this.storyDataService.loadStory(storyTheme).subscribe({
@@ -92,6 +94,9 @@ export class StoryService {
       error: (err) => {
         console.error('Failed to load story:', err);
         this._loading.set(false);
+        if (onError) {
+          onError('Error al cargar la historia. Intenta nuevamente.');
+        }
       },
     });
   }
@@ -144,7 +149,7 @@ export class StoryService {
    * If a runtime node already exists for this choice, navigate to it.
    * Otherwise, call /continue to generate a new node from the AI.
    */
-  async commitChoice(choice: Choice): Promise<string> {
+  async commitChoice(choice: Choice, onError?: (error: string) => void): Promise<string> {
     const parent = this.currentNode();
     const data = this._storyData();
     if (!parent || !data || !choice.nextNodeId) return '';
@@ -171,7 +176,7 @@ export class StoryService {
     }
 
     // Call /continue endpoint for new nodes or death scenes
-    return this._continueFromAI(parent, choice, depth, isDeath);
+    return this._continueFromAI(parent, choice, depth, isDeath, onError);
   }
 
   private _createNodeFromTemplate(
@@ -210,9 +215,11 @@ export class StoryService {
     choice: Choice,
     depth: number,
     isDeath: boolean,
+    onError?: (error: string) => void,
   ): Promise<string> {
     this._loading.set(true);
     const data = this._storyData();
+    const errorMessage = 'Error al continuar la historia. Intenta nuevamente.';
 
     try {
       const request: ContinueRequest = {
@@ -260,6 +267,10 @@ export class StoryService {
       return newId;
     } catch (err) {
       console.error('[continueFromAI] Error:', err);
+      this._error.set(errorMessage);
+      if (onError) {
+        onError(errorMessage);
+      }
       return '';
     } finally {
       this._loading.set(false);

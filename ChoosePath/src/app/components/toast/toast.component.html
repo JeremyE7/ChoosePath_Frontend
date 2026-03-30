@@ -1,3 +1,10 @@
-<div id="toast" role="status" aria-live="polite" [class.show]="visible()">
+<div
+  id="toast"
+  role="alert"
+  aria-live="assertive"
+  [class.visible]="visible()"
+  [class.error]="type() === 'error'"
+  [class.success]="type() === 'success'"
+>
   {{ message() }}
 </div>

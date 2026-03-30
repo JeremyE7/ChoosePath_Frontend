@@ -697,7 +697,8 @@ export class App implements OnInit {
         }
       }
 
-      setTimeout(() => this.storyService.centerOn(newId), 80);
+      // Don't center immediately - let the user see the tree as is
+      // setTimeout(() => this.storyService.centerOn(newId), 80);
     } finally {
       // Clear loading state from preview node
       this.loadingNodeId.set(null);

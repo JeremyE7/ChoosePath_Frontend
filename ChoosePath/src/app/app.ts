@@ -370,10 +370,9 @@ export class App implements OnInit {
   }
 
   onNodeClick(nodeId: string): void {
-    const node = this.storyService.nodes()[nodeId];
-    if (node && node.id !== this.storyService.currentNodeId()) {
-      this.storyService.navTo(nodeId);
-    }
+    // Navigation to previous nodes is disabled - no backtracking allowed
+    // Only the current node is clickable for visual feedback
+    return;
   }
 
   onChoiceDragStart(choice: Choice): void {
@@ -495,12 +494,13 @@ export class App implements OnInit {
   }
 
   onReset(): void {
-    this.storyService.resetStory();
+    // Full restart - go back to start screen to choose new story
+    this.gamePhase.set('start');
     this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
     this.scoreSaved.set(false);
-    this.gamePhase.set('playing');
-    this.showToast('Historia reiniciada');
+    this.playerNickname.set('');
+    localStorage.removeItem('choosepath_player_nickname');
   }
 
   onExport(): void {

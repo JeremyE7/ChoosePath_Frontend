@@ -118,7 +118,8 @@ export class App implements OnInit {
       const details = panel.querySelectorAll('.death-score, .death-nickname');
       const btns = panel.querySelectorAll('.death-btn');
 
-      gsap.timeline()
+      const cp = { clearProps: 'all' };
+      gsap.timeline({ defaults: cp })
         .from(panel, { opacity: 0, duration: 0.2 })
         .from(icon, { scale: 0, rotation: -15, duration: 0.55, ease: 'back.out(2)' }, '-=0.1')
         .from(title, { y: 12, opacity: 0, duration: 0.3 }, '-=0.25')
@@ -367,7 +368,7 @@ export class App implements OnInit {
         const treebar = document.querySelector('.tree-bar');
         const rpWrap = document.querySelector('.rp-wrap');
 
-        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+        const tl = gsap.timeline({ defaults: { ease: 'power2.out', clearProps: 'all' } });
         if (header) tl.from(header, { y: -36, opacity: 0, duration: 0.42 });
         if (treebar) tl.from(treebar, { y: -10, opacity: 0, duration: 0.32 }, '-=0.22');
         if (rpWrap) tl.from(rpWrap, { x: 22, opacity: 0, duration: 0.42 }, '-=0.28');

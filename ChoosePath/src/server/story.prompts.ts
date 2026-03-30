@@ -159,9 +159,9 @@ ESQUEMA JSON DE RESPUESTA (nodo normal):
     "label": "string",
     "scene": "string",
     "choices": [
-      { "key": "A", "text": "string", "nextNodeId": "string o vacío", "deadly": false },
-      { "key": "B", "text": "string", "nextNodeId": "string o vacío", "deadly": true },
-      { "key": "C", "text": "string", "nextNodeId": "string o vacío", "deadly": false }
+      { "key": "A", "text": "string", "nextNodeId": "string", "deadly": false },
+      { "key": "B", "text": "string", "nextNodeId": "string", "deadly": true },
+      { "key": "C", "text": "string", "nextNodeId": "string", "deadly": false }
     ],
     "events": [...],
     "memoryKeys": ["string"],
@@ -251,9 +251,9 @@ ESQUEMA JSON DE RESPUESTA:
       "label": "string",
       "scene": "string",
       "choices": [
-        { "key": "A", "text": "string", "nextNodeId": "string o vacío", "deadly": false },
-        { "key": "B", "text": "string", "nextNodeId": "string o vacío", "deadly": true },
-        { "key": "C", "text": "string", "nextNodeId": "string o vacío", "deadly": false }
+        { "key": "A", "text": "string", "nextNodeId": "string o vacío SOLO SI ES EL FINAL", "deadly": false },
+        { "key": "B", "text": "string", "nextNodeId": "string o vacío SOLO SI ES EL FINAL", "deadly": true },
+        { "key": "C", "text": "string", "nextNodeId": "string o vacío SOLO SI ES EL FINAL", "deadly": false }
       ],
       "events": [...],
       "memoryKeys": ["string"]

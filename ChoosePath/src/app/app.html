@@ -76,17 +76,36 @@
           <div class="death-icon">
             <lucide-icon name="skull" [size]="40" aria-hidden="true"></lucide-icon>
           </div>
-          <h3 class="death-title">Has muerto</h3>
-          <p class="death-score">
-            Score final: <strong>{{ playerScore() }}</strong>
-          </p>
+          <h3 class="death-title">Tu historia termina aquí</h3>
+          <p class="death-narrator">{{ deathStats().narrator }} dice:</p>
+          
+          <!-- Stats Grid -->
+          <div class="death-stats-grid">
+            <div class="death-stat">
+              <span class="stat-value">{{ deathStats().score }}</span>
+              <span class="stat-label">Puntuación</span>
+            </div>
+            <div class="death-stat">
+              <span class="stat-value">{{ deathStats().nodes }}</span>
+              <span class="stat-label">Nodos</span>
+            </div>
+            <div class="death-stat">
+              <span class="stat-value">{{ deathStats().branches }}</span>
+              <span class="stat-label">Ramas</span>
+            </div>
+            <div class="death-stat">
+              <span class="stat-value">{{ deathStats().memories }}</span>
+              <span class="stat-label">Memorias</span>
+            </div>
+          </div>
+          
           <p class="death-nickname">Jugador: {{ playerNickname() }}</p>
           @if (!scoreSaved()) {
             <button class="death-btn save" (click)="onSaveScore()">Guardar score</button>
           } @else {
             <p class="death-saved">Score guardado</p>
           }
-          <button class="death-btn retry" (click)="onPlayAgain()">Jugar de nuevo</button>
+          <button class="death-btn retry" (click)="onPlayAgain()">Nueva aventura</button>
         </div>
       } @else {
         <app-choice-panel

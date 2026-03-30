@@ -343,26 +343,64 @@ body {
   text-align: center;
   border-top: 2px solid var(--rose);
   background: rgba(240, 86, 122, 0.04);
+  animation: deathFadeIn 0.5s ease-out;
+}
+@keyframes deathFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .death-icon {
   font-size: 2.4rem;
   margin-bottom: 8px;
+  animation: deathPulse 2s ease-in-out infinite;
+}
+@keyframes deathPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
 }
 .death-title {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--rose);
-  margin-bottom: 8px;
-}
-.death-score {
-  font-family: var(--f-mono);
-  font-size: 0.9rem;
-  color: var(--ink2);
   margin-bottom: 4px;
 }
-.death-score strong {
-  font-size: 1.2rem;
+.death-narrator {
+  font-family: var(--f-mono);
+  font-size: 0.65rem;
+  color: var(--violet);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+.death-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--s1);
+  border-radius: var(--r-md);
+}
+.death-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  background: var(--s0);
+  border-radius: var(--r-sm);
+}
+.death-stat .stat-value {
+  font-family: var(--f-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--blue);
+}
+.death-stat .stat-label {
+  font-family: var(--f-mono);
+  font-size: 0.55rem;
+  color: var(--ink4);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .death-nickname {
   font-family: var(--f-mono);
@@ -380,14 +418,16 @@ body {
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 8px;
-  transition: opacity 0.15s;
+  transition: all 0.15s;
 }
 .death-btn:hover {
   opacity: 0.85;
+  transform: translateY(-1px);
 }
 .death-btn.save {
   background: linear-gradient(135deg, #4a7cf7, #6366f1);
   color: white;
+  box-shadow: 0 4px 12px rgba(74, 124, 247, 0.25);
 }
 .death-btn.retry {
   background: var(--s2);

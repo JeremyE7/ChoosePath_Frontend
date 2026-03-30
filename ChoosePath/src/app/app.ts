@@ -20,6 +20,7 @@ import gsap from 'gsap';
 import { StoryService } from './services/story.service';
 import { MemoryService } from './services/memory.service';
 import { ScoreService } from './services/score.service';
+import { NarratorService } from './services/narrator.service';
 import { Choice, ScoreEntry } from './models/story.model';
 
 // Components
@@ -55,6 +56,7 @@ export class App implements OnInit {
   private readonly storyService = inject(StoryService);
   private readonly memoryService = inject(MemoryService);
   private readonly scoreService = inject(ScoreService);
+  private readonly narratorService = inject(NarratorService);
   private readonly platformId = inject(PLATFORM_ID);
 
   @ViewChild(TreeCanvasComponent) treeCanvasComponent!: TreeCanvasComponent;
@@ -131,6 +133,16 @@ export class App implements OnInit {
   // ==========================================================================
   // COMPUTED VALUES
   // ==========================================================================
+
+  // Death stats for death screen
+  readonly deathStats = computed(() => ({
+    score: this.playerScore(),
+    nodes: this.nodeCount(),
+    branches: this.branches(),
+    memories: this.memoryCount(),
+    racha: this.narratorService.getRacha(),
+    narrator: this.narratorService.getNarratorName(),
+  }));
 
   readonly memoryLogEntries = computed(() => this.memoryService.renderMemLog());
 
@@ -354,6 +366,9 @@ export class App implements OnInit {
     this.memoryService.clearMemories();
     localStorage.setItem('choosepath_player_nickname', data.nickname);
 
+    // Initialize narrator with story context
+    this.narratorService.setStoryContext(data.genre, data.tone);
+
     this.storyService.loadStory(
       { genre: data.genre, language: 'Español', theme: data.theme, tone: data.tone },
       (error: string) => {
@@ -553,9 +568,14 @@ export class App implements OnInit {
 
       if (node.isDeath) {
         this.gamePhase.set('dead');
-        this.showToast('Has muerto. Score: ' + this.playerScore());
+        const deathMessage = this.narratorService.getDeathMessage();
+        this.showToast(deathMessage + ' Score: ' + this.playerScore());
       } else {
-        this.showToast(`"${node.label}" agregado al arbol`);
+        // Record safe choice for racha
+        this.narratorService.recordSafeChoice();
+        
+        const advanceMessage = this.narratorService.getAdvanceMessage();
+        this.showToast(`"${node.label}" - ${advanceMessage}`);
       }
     }
 

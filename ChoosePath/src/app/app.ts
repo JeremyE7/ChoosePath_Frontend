@@ -12,6 +12,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 import { StoryService } from './services/story.service';
 import { MemoryService } from './services/memory.service';
 import { ScoreService } from './services/score.service';
@@ -33,6 +34,7 @@ import { StartScreenComponent } from './components/start-screen/start-screen.com
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    LucideAngularModule,
     HeaderComponent,
     SidebarComponent,
     TreeCanvasComponent,

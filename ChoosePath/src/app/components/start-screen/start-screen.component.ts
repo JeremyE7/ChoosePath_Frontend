@@ -1,6 +1,7 @@
 import { Component, output, signal, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { ScoreService } from '../../services/score.service';
 import type { ScoreEntry } from '../../models/story.model';
 
@@ -8,7 +9,7 @@ import type { ScoreEntry } from '../../models/story.model';
   selector: 'app-start-screen',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <div class="landing">
       <!-- Aurora Background -->
@@ -21,23 +22,7 @@ import type { ScoreEntry } from '../../models/story.model';
             <!-- Logo -->
             <div class="hero-logo">
               <div class="logo-orb">
-                <svg
-                  aria-hidden="true"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="white"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M3 12h4M17 12h4M7 12a5 5 0 0 1 10 0" />
-                  <circle cx="12" cy="7" r="2" />
-                  <circle cx="6" cy="17" r="2" />
-                  <circle cx="18" cy="17" r="2" />
-                  <path d="M8.5 15.5 10 13M15.5 15.5 14 13" />
-                </svg>
+                <lucide-icon name="waypoints" [size]="20" color="white" aria-hidden="true"></lucide-icon>
               </div>
               <h1 class="hero-title">Choose<span class="title-path">Path</span></h1>
             </div>
@@ -120,7 +105,7 @@ import type { ScoreEntry } from '../../models/story.model';
                 [disabled]="!nickname().trim() || !theme().trim()"
                 (click)="onStart()"
               >
-                <span class="btn-icon">&#10148;</span>
+                <lucide-icon name="arrow-right" [size]="16" aria-hidden="true"></lucide-icon>
                 Comenzar aventura
               </button>
             </div>
@@ -132,20 +117,7 @@ import type { ScoreEntry } from '../../models/story.model';
           <div class="scoreboard-card">
             <div class="sb-header">
               <div class="sb-title">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                  <path d="M4 22h16" />
-                  <path d="M10 22V8a4 4 0 0 1 4 0v14" />
-                  <path d="M10 14h4" />
-                </svg>
+                <lucide-icon name="trophy" [size]="16" aria-hidden="true"></lucide-icon>
                 Top Scores
               </div>
               <div class="sb-badge">
@@ -156,7 +128,9 @@ import type { ScoreEntry } from '../../models/story.model';
             <div class="score-list">
               @if (topScores().length === 0) {
                 <div class="score-empty">
-                  <div class="empty-icon">&#128200;</div>
+                  <div class="empty-icon">
+                    <lucide-icon name="trending-up" [size]="32" aria-hidden="true"></lucide-icon>
+                  </div>
                   <p>Sé el primero en registrar tu score</p>
                 </div>
               } @else {
@@ -169,11 +143,11 @@ import type { ScoreEntry } from '../../models/story.model';
                   >
                     <div class="score-rank">
                       @if (i === 0) {
-                        <span class="rank-medal">&#129351;</span>
+                        <lucide-icon name="medal" [size]="16" color="#ffd700" aria-label="1er lugar"></lucide-icon>
                       } @else if (i === 1) {
-                        <span class="rank-medal">&#129352;</span>
+                        <lucide-icon name="medal" [size]="16" color="#c0c0c0" aria-label="2do lugar"></lucide-icon>
                       } @else if (i === 2) {
-                        <span class="rank-medal">&#129353;</span>
+                        <lucide-icon name="medal" [size]="16" color="#cd7f32" aria-label="3er lugar"></lucide-icon>
                       } @else {
                         {{ i + 1 }}
                       }
@@ -460,12 +434,12 @@ import type { ScoreEntry } from '../../models/story.model';
         cursor: not-allowed;
       }
 
-      .btn-icon {
-        font-size: 1rem;
+      .form-btn lucide-icon {
         transition: transform 0.15s;
+        flex-shrink: 0;
       }
 
-      .form-btn:hover:not(:disabled) .btn-icon {
+      .form-btn:hover:not(:disabled) lucide-icon {
         transform: translateX(3px);
       }
 
@@ -531,9 +505,9 @@ import type { ScoreEntry } from '../../models/story.model';
       }
 
       .empty-icon {
-        font-size: 2rem;
         margin-bottom: 8px;
         opacity: 0.5;
+        color: var(--ink4);
       }
 
       .score-empty p {
@@ -597,8 +571,8 @@ import type { ScoreEntry } from '../../models/story.model';
         background: rgba(205, 127, 50, 0.2);
       }
 
-      .rank-medal {
-        font-size: 1rem;
+      .score-rank lucide-icon {
+        display: block;
       }
 
       .score-info {

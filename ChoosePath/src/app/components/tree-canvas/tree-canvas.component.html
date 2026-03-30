@@ -169,25 +169,7 @@
   <div id="hint" [class.gone]="!hintVisible()" aria-live="polite">
     <div class="hint-box">
       <div class="hint-ico">
-        <svg
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="url(#grad1)"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <defs>
-            <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#4a7cf7" />
-              <stop offset="100%" stop-color="#8b5cf6" />
-            </linearGradient>
-          </defs>
-          <path d="M5 9l4 4 4-4M5 15l4 4 4-4M17 4v16" />
-        </svg>
+        <lucide-icon name="mouse-pointer-click" [size]="20" color="#4a7cf7" [strokeWidth]="1.8" aria-hidden="true"></lucide-icon>
       </div>
       <div class="hint-t">Arrastra una decision al arbol</div>
       <div class="hint-s">Sueltala sobre el nodo activo para avanzar</div>

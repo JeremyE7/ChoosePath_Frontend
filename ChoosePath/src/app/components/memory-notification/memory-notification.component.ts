@@ -1,9 +1,11 @@
 import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MemoryService } from '../../services/memory.service';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-memory-notification',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [LucideAngularModule],
   templateUrl: './memory-notification.component.html',
   styleUrls: ['./memory-notification.component.css'],
 })

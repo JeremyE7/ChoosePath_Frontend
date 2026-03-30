@@ -1,5 +1,6 @@
 import { Component, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 
 export interface NarrativeEvent {
   type: 'enemy' | 'event' | 'warning' | 'mystery' | 'memory';
@@ -16,7 +17,7 @@ export interface DepthPip {
   selector: 'app-narrative-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './narrative-panel.component.html',
   styleUrls: ['./narrative-panel.component.css'],
 })

@@ -11,6 +11,7 @@ import {
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 
 export interface TreeNode {
   id: string;
@@ -43,7 +44,7 @@ export interface TreeEdge {
 @Component({
   selector: 'app-tree-canvas',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './tree-canvas.component.html',
   styleUrls: ['./tree-canvas.component.css'],
   host: { '[class.panning]': 'isPanning()' },

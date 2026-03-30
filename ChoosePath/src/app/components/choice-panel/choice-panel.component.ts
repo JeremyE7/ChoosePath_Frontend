@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 import { Choice } from '../../models/story.model';
 
 export type { Choice };
@@ -7,7 +8,7 @@ export type { Choice };
 @Component({
   selector: 'app-choice-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './choice-panel.component.html',
   styleUrls: ['./choice-panel.component.css'],
 })

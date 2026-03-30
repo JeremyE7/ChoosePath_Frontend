@@ -73,7 +73,9 @@
 
       @if (gamePhase() === 'dead') {
         <div class="death-panel">
-          <div class="death-icon">&#9760;</div>
+          <div class="death-icon">
+            <lucide-icon name="skull" [size]="40" aria-hidden="true"></lucide-icon>
+          </div>
           <h3 class="death-title">Has muerto</h3>
           <p class="death-score">
             Score final: <strong>{{ playerScore() }}</strong>

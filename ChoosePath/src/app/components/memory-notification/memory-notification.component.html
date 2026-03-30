@@ -3,19 +3,7 @@
     <div class="mn" [class.visible]="isVisible()">
       <div class="mn-top">
         <div class="mn-icon">
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#4a7cf7"
-            stroke-width="2"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 8v4l3 3" />
-          </svg>
+          <lucide-icon name="bookmark" [size]="13" color="#4a7cf7" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
         </div>
         <div class="mn-who">{{ current()!.who }}</div>
       </div>

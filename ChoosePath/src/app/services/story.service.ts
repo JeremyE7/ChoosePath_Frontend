@@ -39,6 +39,9 @@ export class StoryService {
   /** Nodes whose x position should not be overwritten by _recalculateTreeLayout. */
   private _pinnedX: Record<string, number> = {};
 
+  /** Memory catalog from the initial GenerateResponse — used to resolve memoryKeys on pre-generated nodes. */
+  private _memoryCatalog: Record<string, { who: string; text: string }> = {};
+
   private readonly _nodes = signal<Record<string, StoryNode>>({});
   private readonly _currentNodeId = signal<string>('root');
   private readonly _nodePositions = signal<Record<string, NodePosition>>({});
@@ -108,17 +111,22 @@ export class StoryService {
     const data = this._storyData();
     if (!data) return;
 
+    if (data.memories) this._memoryCatalog = data.memories;
+
     const rootTemplate = data.nodes[data.rootNodeId];
     if (!rootTemplate) return;
 
     const rootNode = this._templateToNode('root', rootTemplate);
     this._nodes.set({ root: rootNode });
     this._currentNodeId.set('root');
+    this._processMemoryKeys(rootTemplate.memoryKeys, 'root');
     this._recalculateTreeLayout();
   }
 
   resetStory(): void {
     this._pinnedX = {};
+    this._memoryCatalog = {};
+    this.memoryService.clearMemories();
     this._nodes.set({});
     this._nodeCount.set(1);
     this._maxDepth.set(0);
@@ -201,6 +209,7 @@ export class StoryService {
     this._maxDepthEverReached.update((d) => Math.max(d, depth));
 
     this._currentNodeId.set(newId);
+    this._processMemoryKeys(template.memoryKeys, newId);
     this._recalculateTreeLayout();
 
     if (newNode.isDeath) {
@@ -211,6 +220,13 @@ export class StoryService {
     }
 
     return newId;
+  }
+
+  private _processMemoryKeys(keys: string[], nodeId: string): void {
+    for (const key of keys) {
+      const mem = this._memoryCatalog[key];
+      if (mem) this.memoryService.addMem(key, mem.who, mem.text, nodeId);
+    }
   }
 
   private async _continueFromAI(
@@ -620,7 +636,7 @@ export class StoryService {
       branchCount: this._branchCount(),
       maxDepthEverReached: this._maxDepthEverReached(),
       storyConfig: this.storyConfig,
-      memories: this.memoryService.getAllMemories(),
+      memories: this.memoryService.getAllMemoriesWithKeys(),
       isPlayerDead: this._isPlayerDead(),
       savedAt: Date.now(),
     };
@@ -652,6 +668,7 @@ export class StoryService {
       // Restore all state
       if (state.storyData) {
         this._storyData.set(state.storyData);
+        if (state.storyData.memories) this._memoryCatalog = state.storyData.memories;
       }
 
       this.storyConfig = state.storyConfig || {};
@@ -670,7 +687,7 @@ export class StoryService {
       if (state.memories) {
         this.memoryService.clearMemories();
         for (const mem of state.memories) {
-          this.memoryService.addMem(mem.key || mem.who, mem.who, mem.txt, mem.nodeId);
+          this.memoryService.addMem(mem.key, mem.who, mem.txt, mem.nodeId);
         }
       }
 
@@ -710,7 +727,7 @@ interface GameState {
   branchCount: number;
   maxDepthEverReached: number;
   storyConfig: Partial<GenerateRequest>;
-  memories: Array<{ key?: string; who: string; txt: string; nodeId: string }>;
+  memories: Array<{ key: string; who: string; txt: string; nodeId: string }>;
   isPlayerDead: boolean;
   savedAt: number;
 }

@@ -612,14 +612,6 @@ export class App implements OnInit {
 
       const node = this.storyService.nodes()[newId];
       if (node) {
-        const evs = node.events || [];
-        node.memoryKeys?.forEach((k, i) => {
-          const ev = evs[i] || evs[0];
-          if (ev && ev.who && ev.description) {
-            this.memoryService.addMem(k, ev.who, ev.description, node.id);
-          }
-        });
-
         if (node.isDeath) {
           this.gamePhase.set('dead');
           const deathMessage = this.narratorService.getDeathMessage();

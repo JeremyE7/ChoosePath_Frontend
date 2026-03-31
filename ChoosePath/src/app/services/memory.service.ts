@@ -166,6 +166,10 @@ export class MemoryService {
     return Object.entries(this._memories()).map(([_, v]) => v);
   }
 
+  getAllMemoriesWithKeys(): Array<{ key: string } & MemoryEntry> {
+    return Object.entries(this._memories()).map(([key, v]) => ({ key, ...v }));
+  }
+
   /**
    * Backward compatibility: getRecentMemories
    */

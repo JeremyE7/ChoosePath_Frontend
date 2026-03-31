@@ -104,6 +104,7 @@ export interface StoryData {
   title: string;
   rootNodeId: string;
   nodes: Record<string, StoryNodeTemplate>;
+  memories?: Record<string, { who: string; text: string }>;
 }
 
 /**

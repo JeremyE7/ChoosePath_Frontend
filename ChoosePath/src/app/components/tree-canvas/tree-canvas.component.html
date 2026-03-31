@@ -148,20 +148,6 @@
           }
         </g>
       }
-
-      <!-- Ghost stubs - only show if NO preview nodes (fallback) -->
-      @if (currentNodeChildren().length === 0 && ghostStubPaths().length > 0 && previewNodes().length === 0) {
-        @for (path of ghostStubPaths(); track $index) {
-          <path
-            [attr.d]="path"
-            fill="none"
-            stroke="rgba(120,140,200,.2)"
-            stroke-width="1"
-            stroke-dasharray="3 3"
-            marker-end="url(#ahg)"
-          />
-        }
-      }
     </g>
     
     <!-- Preview edges (connections to choice options) -->
@@ -239,8 +225,8 @@
       <div class="hint-ico">
         <lucide-icon name="mouse-pointer-click" [size]="20" color="#4a7cf7" [strokeWidth]="1.8" aria-hidden="true"></lucide-icon>
       </div>
-      <div class="hint-t">Arrastra una decision al arbol</div>
-      <div class="hint-s">Sueltala sobre el nodo activo para avanzar</div>
+      <div class="hint-t">Selecciona una opcion del arbol</div>
+      <div class="hint-s">Haz click en las opciones para continuar</div>
     </div>
   </div>
 </div>

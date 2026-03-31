@@ -1,0 +1,36 @@
+<div class="mp" [class.expanded]="isExpanded()">
+  <!-- Header del panel -->
+  <div class="mp-hd" (click)="togglePanel()" role="button" tabindex="0" aria-expanded="isExpanded()">
+    <div class="mph-icon">
+      <lucide-icon name="bookmark" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+    </div>
+    <span class="mph-title">Memorias</span>
+    <span class="mph-count">{{ allMemories().length }}</span>
+    <div class="mph-chevron">
+      <lucide-icon name="chevron-down" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+    </div>
+  </div>
+
+  <!-- Contenido con scroll -->
+  @if (isExpanded()) {
+    <div class="mp-content">
+      @if (allMemories().length === 0) {
+        <p class="mp-empty">Aún no hay memorias registradas.</p>
+      } @else {
+        <div class="mp-list">
+          @for (mem of allMemories(); track mem.nodeId + mem.who) {
+            <div class="mn-card">
+              <div class="mn-top">
+                <div class="mn-icon">
+                  <lucide-icon name="bookmark" [size]="12" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
+                </div>
+                <div class="mn-who">{{ mem.who }}</div>
+              </div>
+              <div class="mn-txt">{{ mem.txt }}</div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

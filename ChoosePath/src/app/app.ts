@@ -25,10 +25,9 @@ import { Choice, ScoreEntry } from './models/story.model';
 
 // Components
 import { HeaderComponent } from './components/header/header.component';
-import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { TreeCanvasComponent, TreePreviewNode } from './components/tree-canvas/tree-canvas.component';
 import { NarrativePanelComponent } from './components/narrative-panel/narrative-panel.component';
-import { ChoicePanelComponent } from './components/choice-panel/choice-panel.component';
+import { MemoryPanelComponent } from './components/memory-panel/memory-panel.component';
 import { MemoryNotificationComponent } from './components/memory-notification/memory-notification.component';
 import { ToastComponent } from './components/toast/toast.component';
 import { StartScreenComponent } from './components/start-screen/start-screen.component';
@@ -41,10 +40,9 @@ import { StartScreenComponent } from './components/start-screen/start-screen.com
     CommonModule,
     LucideAngularModule,
     HeaderComponent,
-    SidebarComponent,
     TreeCanvasComponent,
     NarrativePanelComponent,
-    ChoicePanelComponent,
+    MemoryPanelComponent,
     MemoryNotificationComponent,
     ToastComponent,
     StartScreenComponent,
@@ -60,14 +58,6 @@ export class App implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
 
   @ViewChild(TreeCanvasComponent) treeCanvasComponent!: TreeCanvasComponent;
-
-  // Drag state
-  private _isDragging = false;
-  private _dragChoice: Choice | null = null;
-  private _dragStartX = 0;
-  private _dragStartY = 0;
-  private _dragMoved = false;
-  private _dragSnap = false;
 
   // ==========================================================================
   // GAME STATE
@@ -93,12 +83,6 @@ export class App implements OnInit {
   readonly isPlayerDead = this.storyService.isPlayerDead;
   readonly playerScore = this.storyService.maxDepthEverReached;
   readonly storyTitle = this.storyService.storyTitle;
-
-  // Ghost signals
-  readonly ghostText = signal('');
-  readonly ghostPosition = signal({ x: 0, y: 0 });
-  readonly ghostVisible = signal(false);
-  readonly ghostSnap = signal(false);
 
   // Toast
   readonly toastVisible = signal(false);
@@ -150,12 +134,6 @@ export class App implements OnInit {
   readonly memoryLogEntries = computed(() => this.memoryService.renderMemLog());
 
   readonly currentNode = this.storyService.currentNode;
-
-  readonly currentNodeChoices = computed<Choice[]>(() => {
-    if (this.isPlayerDead()) return [];
-    const node = this.currentNode();
-    return node?.choices || [];
-  });
 
   readonly currentNodeChildren = computed(() => {
     const node = this.currentNode();
@@ -280,39 +258,9 @@ export class App implements OnInit {
     return edges;
   });
 
-  readonly depthPips = computed(() => {
-    const total = Math.max(this.maxDepth() + 2, 6);
-    const current = this.maxDepth();
-    return Array.from({ length: total }, (_, i) => ({
-      done: i < current,
-      here: i === current,
-    }));
-  });
-
-  readonly ghostStubPaths = computed(() => {
-    const choices = this.currentNodeChoices();
-    const n = choices.length;
-    if (n === 0) return [];
-
-    const currentPos = this.storyService.nodePositions()[this.storyService.currentNodeId()];
-    if (!currentPos) return [];
-
-    const NW = 122;
-    const NH = 33;
-    const cx = currentPos.x + NW / 2;
-    const cy = currentPos.y + NH;
-
-    return choices.map((_, i) => {
-      const ang = (i - (n - 1) / 2) * 0.34;
-      const ex = cx + Math.sin(ang) * 50;
-      const ey = cy + 34;
-      return `M${cx},${cy} Q${cx + (ex - cx) * 0.5},${cy + 13} ${ex},${ey}`;
-    });
-  });
-
-  // Preview nodes - choice options shown directly on tree (same visual style as real nodes)
   readonly previewNodes = computed<TreePreviewNode[]>(() => {
-    const choices = this.currentNodeChoices();
+    const node = this.currentNode();
+    const choices = node?.choices || [];
     
     // Don't show preview if no choices OR player is dead
     // Note: We show preview even if node has children (they're the uncreated choices)
@@ -419,6 +367,15 @@ export class App implements OnInit {
   hasMemoryFn = (text: string): boolean => {
     return this.memoryService.hasMem(text);
   };
+
+  readonly depthPips = computed(() => {
+    const total = Math.max(this.maxDepth() + 2, 6);
+    const current = this.maxDepth();
+    return Array.from({ length: total }, (_, i) => ({
+      done: i < current,
+      here: i === current,
+    }));
+  });
 
   // ==========================================================================
   // LIFECYCLE
@@ -573,95 +530,6 @@ export class App implements OnInit {
     // Set loading state on the clicked preview node
     this.loadingNodeId.set(`preview-${choice.key}`);
     this.commitChoice(choice);
-  }
-
-  onChoiceDragStart(choice: Choice): void {
-    if (this.loading() || this.isPlayerDead()) return;
-
-    if (this._isDragging && this._dragChoice?.nextNodeId === choice.nextNodeId && this._dragMoved) {
-      this.commitChoice(choice);
-      return;
-    }
-
-    this._isDragging = true;
-    this._dragChoice = choice;
-    this._dragMoved = false;
-    this._dragSnap = false;
-    this.ghostText.set(choice.text);
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (!this._isDragging) return;
-
-      const canvasEl = this.treeCanvasComponent.getCanvasElement().nativeElement;
-      const rect = canvasEl.getBoundingClientRect();
-      const canvasWidth = rect.width;
-      const canvasHeight = rect.height;
-
-      const vb = this.storyService.viewBox();
-
-      const mouseCanvasX = e.clientX - rect.left;
-      const mouseCanvasY = e.clientY - rect.top;
-
-      const svgX = vb.x + (mouseCanvasX / canvasWidth) * vb.w;
-      const svgY = vb.y + (mouseCanvasY / canvasHeight) * vb.h;
-
-      if (!this._dragMoved) {
-        const dragStartCanvasX = this._dragStartX - rect.left;
-        const dragStartCanvasY = this._dragStartY - rect.top;
-        if (Math.hypot(mouseCanvasX - dragStartCanvasX, mouseCanvasY - dragStartCanvasY) < 5)
-          return;
-        this._dragMoved = true;
-        this.ghostVisible.set(true);
-      }
-
-      const currentId = this.storyService.currentNodeId();
-      const pos = this.storyService.nodePositions()[currentId];
-
-      if (pos) {
-        const NW = 122;
-        const NH = 33;
-        const nodeSvgX = pos.x + NW / 2;
-        const nodeSvgY = pos.y + NH / 2;
-
-        const dist = Math.hypot(svgX - nodeSvgX, svgY - nodeSvgY);
-
-        if (dist < 80 && !this._dragSnap) {
-          this._dragSnap = true;
-          this.ghostSnap.set(true);
-        } else if (dist >= 80 && this._dragSnap) {
-          this._dragSnap = false;
-          this.ghostSnap.set(false);
-        }
-      }
-
-      this.ghostPosition.set({ x: e.clientX - 100, y: e.clientY - 20 });
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-
-      this.ghostVisible.set(false);
-      this.ghostSnap.set(false);
-      this._isDragging = false;
-
-      if (this._dragMoved && this._dragSnap && this._dragChoice) {
-        this.commitChoice(this._dragChoice);
-      }
-    };
-
-    this._dragStartX = 0;
-    this._dragStartY = 0;
-
-    const startDrag = (e: MouseEvent) => {
-      this._dragStartX = e.clientX;
-      this._dragStartY = e.clientY;
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', onMouseUp);
-      document.removeEventListener('mousedown', startDrag);
-    };
-
-    document.addEventListener('mousedown', startDrag);
   }
 
   private async commitChoice(choice: Choice): Promise<void> {

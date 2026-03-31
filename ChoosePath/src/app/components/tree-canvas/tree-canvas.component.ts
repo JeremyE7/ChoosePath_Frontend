@@ -81,7 +81,6 @@ export class TreeCanvasComponent {
   viewBoxString = input.required<string>();
   hintVisible = input.required<boolean>();
   currentNodeChildren = input.required<string[]>();
-  ghostStubPaths = input.required<string[]>();
   
   // Preview nodes - choice options shown on tree before selection
   previewNodes = input<TreePreviewNode[]>([]);

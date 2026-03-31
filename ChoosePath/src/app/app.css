@@ -261,38 +261,6 @@ body {
   overflow: hidden;
 }
 
-/* Choice panel: natural size, never hidden */
-.rp-wrap app-choice-panel {
-  flex-shrink: 0;
-}
-
-/* ════════════════════════════ DRAG GHOST */
-#ghost {
-  position: fixed;
-  pointer-events: none;
-  z-index: 9000;
-  background: var(--s0);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border2);
-  border-radius: var(--r-lg);
-  padding: 9px 14px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ink);
-  box-shadow: var(--sh-lg);
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transform-origin: center center;
-}
-#ghost.snap {
-  background: linear-gradient(135deg, rgba(74, 124, 247, 0.15), rgba(139, 92, 246, 0.15));
-  border-color: rgba(74, 124, 247, 0.6);
-  color: var(--blue);
-  box-shadow: var(--sh-glow);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

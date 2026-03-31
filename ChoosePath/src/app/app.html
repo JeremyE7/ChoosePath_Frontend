@@ -39,13 +39,15 @@
       </div>
     </div>
 
+    <!-- Memory Panel - floats inside tree container -->
+    <app-memory-panel></app-memory-panel>
+
     <app-tree-canvas
       [treeNodes]="treeNodes()"
       [treeEdges]="treeEdges()"
       [viewBoxString]="viewBoxString()"
       [hintVisible]="hintVisible()"
       [currentNodeChildren]="currentNodeChildren()"
-      [ghostStubPaths]="ghostStubPaths()"
       [previewNodes]="previewNodes()"
       [previewEdges]="previewEdges()"
       [loadingNodeId]="loadingNodeId()"
@@ -111,29 +113,12 @@
       }
       <button class="death-btn retry" (click)="onPlayAgain()">Nueva aventura</button>
     </div>
-    } @else {
-    <app-choice-panel
-      [choices]="currentNodeChoices()"
-      [hasMemory]="hasMemoryFn"
-      (choiceDragStart)="onChoiceDragStart($event)"
-    ></app-choice-panel>
     }
   </div>
 </div>
 
 <!-- Memory Notifications -->
 <app-memory-notification></app-memory-notification>
-
-<!-- Ghost for drag preview -->
-<div
-  id="ghost"
-  [class.snap]="ghostSnap()"
-  [style.display]="ghostVisible() ? 'block' : 'none'"
-  [style.left.px]="ghostPosition().x"
-  [style.top.px]="ghostPosition().y"
->
-  {{ ghostText() }}
-</div>
 }
 
 <!-- Toast - always in DOM for transitions -->

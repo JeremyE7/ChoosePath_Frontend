@@ -430,6 +430,7 @@ export class StoryService {
   pinNodeX(nodeId: string, x: number): void {
     this._pinnedX[nodeId] = x;
     this._nodePositions.update(p => ({ ...p, [nodeId]: { ...p[nodeId], x } }));
+    this.saveGameState(); // Persist immediately — saveGameState ran before this pin was applied
   }
 
   findParentNode(childId: string): string | null {

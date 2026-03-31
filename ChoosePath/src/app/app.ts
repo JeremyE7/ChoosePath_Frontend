@@ -12,6 +12,7 @@ import {
   ChangeDetectionStrategy,
   ViewChild,
   PLATFORM_ID,
+  afterNextRender,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule } from '@angular/common';
@@ -60,6 +61,13 @@ export class App implements OnInit {
   private readonly scoreService = inject(ScoreService);
   private readonly narratorService = inject(NarratorService);
   private readonly platformId = inject(PLATFORM_ID);
+
+  constructor() {
+    // afterNextRender runs only in the browser, after the first render completes.
+    // This avoids OnPush CD timing issues during hydration that would require a
+    // manual click to trigger the first view update.
+    afterNextRender(() => this._tryRestoreGame());
+  }
 
   @ViewChild(TreeCanvasComponent) treeCanvasComponent!: TreeCanvasComponent;
 
@@ -404,7 +412,6 @@ export class App implements OnInit {
 
   ngOnInit(): void {
     this._loadTopScores();
-    this._tryRestoreGame();
   }
 
   private _tryRestoreGame(): void {

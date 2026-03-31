@@ -131,7 +131,7 @@ export class TreeCanvasComponent {
   }
 
   showNodeTooltip(node: TreeNode): void {
-    if (this.isPanning() || node.displayLabel === node.label) return;
+    if (this.isPanning()) return;
     const pos = this._svgToCanvas(node.x + node.width / 2, node.y);
     this.tooltip.set({ text: node.label, x: pos.x, y: pos.y });
   }

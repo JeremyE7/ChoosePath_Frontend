@@ -152,6 +152,12 @@ REGLAS ABSOLUTAS:
 6. El campo "scene" puede tener <em>texto</em> para énfasis. Escribe de 1 a 3 párrafos breves.
 7. El campo "label" es un título ultra-corto para el árbol visual (máximo 4 palabras).
 
+REGLAS DE MEMORIAS (newMemories):
+- Crea UNA memoria nueva cuando ocurra algo verdaderamente significativo: conocer a un personaje clave, descubrir un secreto importante, forjar una alianza, recibir un objeto especial, o presenciar un evento que cambia el curso de la historia.
+- No crees memoria en cada nodo — solo cuando el momento lo amerite narrativamente (aproximadamente 1 de cada 2-3 nodos).
+- Si no hay nada memorable en este nodo, devuelve "newMemories": {}.
+- El campo "who" debe ser el nombre del personaje, lugar o entidad relevante. El campo "text" debe ser una frase corta que capture la esencia del recuerdo (máximo 12 palabras).
+
 ESQUEMA JSON DE RESPUESTA (nodo normal):
 {
   "nodeId": "string",
@@ -218,6 +224,7 @@ Este nodo debe:
 - Ser coherente con todo el historial anterior.
 - Tener en cuenta las memorias activas si son relevantes.
 ${!req.isDeath ? '- Cada choice debe tener el campo "deadly" (true o false).\n- Las opciones mortales deben estar DISFRAZADAS — no obvias.' : ''}
+- Si este nodo introduce un personaje clave, un secreto o un giro importante, incluye una entrada en "newMemories". Si no, deja "newMemories": {}.
 
 Responde SOLO con el JSON según el esquema indicado.`;
 }

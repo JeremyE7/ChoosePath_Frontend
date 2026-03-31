@@ -190,7 +190,6 @@
 /* Ghost nodes - unchosen choices that persist in tree */
 .preview-node.ghost {
   cursor: default;
-  pointer-events: none;
 }
 
 .preview-node.ghost rect:not(.preview-ring) {

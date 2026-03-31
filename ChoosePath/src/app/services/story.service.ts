@@ -36,6 +36,9 @@ export class StoryService {
   // STATE SIGNALS
   // ==========================================================================
 
+  /** Nodes whose x position should not be overwritten by _recalculateTreeLayout. */
+  private _pinnedX: Record<string, number> = {};
+
   private readonly _nodes = signal<Record<string, StoryNode>>({});
   private readonly _currentNodeId = signal<string>('root');
   private readonly _nodePositions = signal<Record<string, NodePosition>>({});
@@ -115,6 +118,7 @@ export class StoryService {
   }
 
   resetStory(): void {
+    this._pinnedX = {};
     this._nodes.set({});
     this._nodeCount.set(1);
     this._maxDepth.set(0);
@@ -160,7 +164,6 @@ export class StoryService {
     if (existingChildId) {
       console.log('Found existing child node for choice, navigating to it:', existingChildId);
       this._currentNodeId.set(existingChildId);
-      this._centerViewOnNode(existingChildId);
       this.saveGameState(); // Auto-save after navigation
       return existingChildId;
     }
@@ -405,20 +408,28 @@ export class StoryService {
     const node = nodes[nodeId];
     if (!node) return;
 
-    positions[nodeId] = { x, y };
+    // Respect pinned x so selected nodes stay at their preview position.
+    const nodeX = this._pinnedX[nodeId] ?? x;
+    positions[nodeId] = { x: nodeX, y };
 
     const children = node.childIds;
     if (children.length === 0) return;
 
     const totalWidth =
       children.length * TREE_CONFIG.nodeWidth + (children.length - 1) * TREE_CONFIG.horizontalGap;
-    const startX = x + TREE_CONFIG.nodeWidth / 2 - totalWidth / 2;
+    const startX = nodeX + TREE_CONFIG.nodeWidth / 2 - totalWidth / 2;
 
     children.forEach((childId, index) => {
       const childX = startX + index * (TREE_CONFIG.nodeWidth + TREE_CONFIG.horizontalGap);
       const childY = y + TREE_CONFIG.nodeHeight + TREE_CONFIG.verticalGap;
       this._layoutNodeRecursive(childId, childX, childY, depth + 1, nodes, positions);
     });
+  }
+
+  /** Pin a node's x so _recalculateTreeLayout won't move it from its preview position. */
+  pinNodeX(nodeId: string, x: number): void {
+    this._pinnedX[nodeId] = x;
+    this._nodePositions.update(p => ({ ...p, [nodeId]: { ...p[nodeId], x } }));
   }
 
   findParentNode(childId: string): string | null {
@@ -602,6 +613,7 @@ export class StoryService {
       nodes: this._nodes(),
       currentNodeId: this._currentNodeId(),
       nodePositions: this._nodePositions(),
+      pinnedX: { ...this._pinnedX },
       nodeCount: this._nodeCount(),
       maxDepth: this._maxDepth(),
       branchCount: this._branchCount(),
@@ -642,6 +654,7 @@ export class StoryService {
       }
 
       this.storyConfig = state.storyConfig || {};
+      this._pinnedX = state.pinnedX || {};
       this._nodes.set(state.nodes || {});
       this._currentNodeId.set(state.currentNodeId || 'root');
       this._nodePositions.set(state.nodePositions || {});
@@ -690,6 +703,7 @@ interface GameState {
   nodes: Record<string, StoryNode>;
   currentNodeId: string;
   nodePositions: Record<string, NodePosition>;
+  pinnedX?: Record<string, number>;
   nodeCount: number;
   maxDepth: number;
   branchCount: number;

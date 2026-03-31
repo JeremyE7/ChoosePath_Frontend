@@ -1116,6 +1116,11 @@
   padding: 0;
 }
 
+app-root.choice-loading,
+app-root.choice-loading * {
+  cursor: wait !important;
+}
+
 html,
 body {
   height: 100%;

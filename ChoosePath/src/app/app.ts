@@ -25,7 +25,10 @@ import { Choice, ScoreEntry } from './models/story.model';
 
 // Components
 import { HeaderComponent } from './components/header/header.component';
-import { TreeCanvasComponent, TreePreviewNode } from './components/tree-canvas/tree-canvas.component';
+import {
+  TreeCanvasComponent,
+  TreePreviewNode,
+} from './components/tree-canvas/tree-canvas.component';
 import { NarrativePanelComponent } from './components/narrative-panel/narrative-panel.component';
 import { MemoryPanelComponent } from './components/memory-panel/memory-panel.component';
 import { MemoryNotificationComponent } from './components/memory-notification/memory-notification.component';
@@ -36,6 +39,7 @@ import { StartScreenComponent } from './components/start-screen/start-screen.com
   selector: 'app-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.choice-loading]': 'loadingNodeId() !== null' },
   imports: [
     CommonModule,
     LucideAngularModule,
@@ -111,7 +115,8 @@ export class App implements OnInit {
       const btns = panel.querySelectorAll('.death-btn');
 
       const cp = { clearProps: 'all' };
-      gsap.timeline({ defaults: cp })
+      gsap
+        .timeline({ defaults: cp })
         .from(panel, { opacity: 0, duration: 0.2 })
         .from(icon, { scale: 0, rotation: -15, duration: 0.55, ease: 'back.out(2)' }, '-=0.1')
         .from(title, { y: 12, opacity: 0, duration: 0.3 }, '-=0.25')
@@ -275,18 +280,22 @@ export class App implements OnInit {
     const node = this.currentNode();
     const choices = node?.choices || [];
     const ghosts = this.ghostNodes();
+    const positions = this.storyService.nodePositions();
+
+    // Ghost positions are preserved from preview time. Real nodes are pinned to their
+    // preview x via storyService.pinNodeX, so ghost x/y remain consistent as-is.
+    const positionedGhosts = ghosts;
 
     // Don't show preview if no choices OR player is dead
-    if (choices.length === 0 || this.isPlayerDead()) return [...ghosts];
+    if (choices.length === 0 || this.isPlayerDead()) return positionedGhosts;
 
-    const currentPos = this.storyService.nodePositions()[this.storyService.currentNodeId()];
-    if (!currentPos) return [...ghosts];
+    const currentPos = positions[this.storyService.currentNodeId()];
+    if (!currentPos) return positionedGhosts;
 
     // Wider preview nodes to fit full text
     const NW = 142;
     const NH = 38;
     const H_GAP = 42;
-    const V_GAP = 70;
     const currentDepth = this.maxDepth();
     const nextDepth = currentDepth + 1;
 
@@ -312,7 +321,7 @@ export class App implements OnInit {
 
     const active = choices.map((choice, i) => {
       const x = startX + i * (NW + H_GAP);
-      const y = currentPos.y + 33 + 50;
+      const y = currentPos.y + 33 + 70; // matches TREE_CONFIG.verticalGap — no jump on selection
 
       const isLoading = loadingId !== null;
       const isThisLoading = loadingId === `preview-${choice.key}`;
@@ -329,17 +338,17 @@ export class App implements OnInit {
         width: NW,
         height: NH,
         color,
-        fill: isThisLoading ? color.fill : (isLoading ? 'rgba(255,255,255,0.25)' : color.fill),
+        fill: isThisLoading ? color.fill : isLoading ? 'rgba(255,255,255,0.25)' : color.fill,
         stroke: color.stroke,
         strokeWidth: isThisLoading ? '2.2' : '1.4',
-        textFill: isThisLoading ? color.txt : (isLoading ? 'rgba(0,0,0,0.3)' : color.txt),
+        textFill: isThisLoading ? color.txt : isLoading ? 'rgba(0,0,0,0.3)' : color.txt,
         isSelected: isThisLoading,
         isDisabled: isLoading && !isThisLoading,
         isGhost: false,
       };
     });
 
-    return [...ghosts, ...active];
+    return [...positionedGhosts, ...active];
   });
 
   // Preview edges - connections from parent to preview nodes
@@ -352,9 +361,7 @@ export class App implements OnInit {
     const NH_TREE = 33;
 
     const edges = previews.map((preview) => {
-      const parentId = preview.isGhost
-        ? preview.parentNodeId
-        : this.storyService.currentNodeId();
+      const parentId = preview.isGhost ? preview.parentNodeId : this.storyService.currentNodeId();
       const parentPos = parentId ? positions[parentId] : null;
       if (!parentPos) return null;
 
@@ -369,8 +376,8 @@ export class App implements OnInit {
       return {
         id: `preview-edge-${preview.id}`,
         path,
-        stroke: preview.isGhost ? 'rgba(120,140,200,.2)' : '#4a7cf7',
-        strokeWidth: preview.isGhost ? '1' : '1.8',
+        stroke: preview.isGhost ? 'rgba(120,140,200,.38)' : '#4a7cf7',
+        strokeWidth: preview.isGhost ? '1.2' : '1.8',
         markerEnd: preview.isGhost ? 'url(#ahg)' : 'url(#ahb)',
         isNew: false,
       };
@@ -404,12 +411,17 @@ export class App implements OnInit {
     if (this.storyService.hasSavedGame()) {
       const restored = this.storyService.restoreGameState();
       if (restored) {
-        // Restore player info from localStorage
         const savedNickname = localStorage.getItem('choosepath_player_nickname');
         if (savedNickname) {
           this.playerNickname.set(savedNickname);
           this.gamePhase.set('playing');
           this.scoreSaved.set(false);
+        }
+        const savedGhosts = localStorage.getItem('choosepath_ghost_nodes');
+        if (savedGhosts) {
+          try {
+            this.ghostNodes.set(JSON.parse(savedGhosts));
+          } catch {}
         }
       }
     }
@@ -445,6 +457,7 @@ export class App implements OnInit {
     this.storyService.resetStory();
     this.memoryService.clearMemories();
     this.ghostNodes.set([]);
+    localStorage.removeItem('choosepath_ghost_nodes');
     localStorage.setItem('choosepath_player_nickname', data.nickname);
 
     // Initialize narrator with story context
@@ -496,6 +509,7 @@ export class App implements OnInit {
     this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
     this.ghostNodes.set([]);
+    localStorage.removeItem('choosepath_ghost_nodes');
     localStorage.removeItem('choosepath_player_nickname');
   }
 
@@ -552,30 +566,42 @@ export class App implements OnInit {
     if (!choice.nextNodeId || this.loading()) return;
     console.log(choice);
 
-    // Save unchosen options as ghost nodes before committing
-    const currentPreviews = this.previewNodes().filter(p => !p.isGhost);
-    const unchosen = currentPreviews.filter(p => p.id !== `preview-${choice.key}`);
-    if (unchosen.length > 0) {
-      const parentNodeId = this.storyService.currentNodeId();
-      const newGhosts: TreePreviewNode[] = unchosen.map(p => ({
-        ...p,
-        isDisabled: true,
-        isSelected: false,
-        isGhost: true,
-        fill: 'rgba(180,190,220,.12)',
-        stroke: 'rgba(180,190,220,.3)',
-        strokeWidth: '0.8',
-        textFill: 'rgba(150,160,190,.55)',
-        parentNodeId,
-      }));
-      this.ghostNodes.update(prev => [...prev, ...newGhosts]);
-    }
+    // Capture previews NOW (before await — currentNode changes after)
+    const currentPreviews = this.previewNodes().filter((p) => !p.isGhost);
+    const unchosen = currentPreviews.filter((p) => p.id !== `preview-${choice.key}`);
+    const chosenPreviewX = currentPreviews.find(p => p.id === `preview-${choice.key}`)?.x;
+    const parentNodeId = this.storyService.currentNodeId();
 
     try {
       const newId = await this.storyService.commitChoice(choice, (error: string) => {
         this.showToast(error, 'error');
       });
       if (!newId) return;
+
+      // Pin the chosen node to its preview x so _recalculateTreeLayout won't re-center it.
+      if (chosenPreviewX !== undefined) {
+        this.storyService.pinNodeX(newId, chosenPreviewX);
+      }
+
+      // Create ghost nodes AFTER the async resolves so the active nodes for the parent
+      // are already gone (currentNode changed). Unique IDs avoid @for track collisions
+      // with active nodes at other depth levels that reuse the same 'preview-A/B/C' keys.
+      if (unchosen.length > 0) {
+        const newGhosts: TreePreviewNode[] = unchosen.map((p) => ({
+          ...p,
+          id: `ghost-${parentNodeId}-${p.choiceKey}`,
+          isDisabled: true,
+          isSelected: false,
+          isGhost: true,
+          fill: 'rgba(180,190,220,.2)',
+          stroke: 'rgba(120,140,200,.5)',
+          strokeWidth: '1.2',
+          textFill: 'rgba(70,90,150,.75)',
+          parentNodeId,
+        }));
+        this.ghostNodes.update((prev) => [...prev, ...newGhosts]);
+        this._saveGhostNodes();
+      }
 
       const node = this.storyService.nodes()[newId];
       if (node) {
@@ -594,7 +620,7 @@ export class App implements OnInit {
         } else {
           // Record safe choice for racha
           this.narratorService.recordSafeChoice();
-          
+
           const advanceMessage = this.narratorService.getAdvanceMessage();
           this.showToast(`"${node.label}" - ${advanceMessage}`);
         }
@@ -614,6 +640,7 @@ export class App implements OnInit {
     this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
     this.ghostNodes.set([]);
+    localStorage.removeItem('choosepath_ghost_nodes');
     this.scoreSaved.set(false);
     this.playerNickname.set('');
     localStorage.removeItem('choosepath_player_nickname');
@@ -629,5 +656,11 @@ export class App implements OnInit {
     this.toastType.set(type);
     this.toastVisible.set(true);
     setTimeout(() => this.toastVisible.set(false), 2400);
+  }
+
+  private _saveGhostNodes(): void {
+    try {
+      localStorage.setItem('choosepath_ghost_nodes', JSON.stringify(this.ghostNodes()));
+    } catch {}
   }
 }

@@ -81,6 +81,8 @@
           tabindex="0"
           [attr.aria-label]="node.label + (node.isCurrent ? ' (activo)' : '')"
           (click)="onNodeClick(node.id)"
+          (mouseenter)="showNodeTooltip(node)"
+          (mouseleave)="hideTooltip()"
           class="tree-node"
           [class.current]="node.isCurrent"
           [class.on-path]="node.isOnPath"
@@ -173,6 +175,8 @@
           tabindex="0"
           [attr.aria-label]="node.label + (node.isSelected ? ' (seleccionado)' : node.isDisabled ? ' (deshabilitado)' : '')"
           (click)="onPreviewClick(node)"
+          (mouseenter)="showPreviewTooltip(node)"
+          (mouseleave)="hideTooltip()"
           class="tree-node preview-node"
           [class.selected]="node.isSelected"
           [class.disabled]="node.isDisabled"
@@ -224,6 +228,16 @@
       }
     </g>
   </svg>
+
+  <!-- Node tooltip -->
+  @if (tooltip(); as tip) {
+    <div
+      class="node-tooltip"
+      role="tooltip"
+      [style.left.px]="tip.x"
+      [style.top.px]="tip.y"
+    >{{ tip.text }}</div>
+  }
 
   <!-- Hint overlay -->
   <div id="hint" [class.gone]="!hintVisible()" aria-live="polite">

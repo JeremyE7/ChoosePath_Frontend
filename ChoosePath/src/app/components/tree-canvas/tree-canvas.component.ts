@@ -101,6 +101,7 @@ export class TreeCanvasComponent {
   zoom = output<'in' | 'out'>();
 
   readonly isPanning = signal(false);
+  readonly tooltip = signal<{ text: string; x: number; y: number } | null>(null);
 
   private _lastX = 0;
   private _lastY = 0;
@@ -129,11 +130,38 @@ export class TreeCanvasComponent {
     this.previewClick.emit(preview.choice);
   }
 
+  showNodeTooltip(node: TreeNode): void {
+    if (this.isPanning() || node.displayLabel === node.label) return;
+    const pos = this._svgToCanvas(node.x + node.width / 2, node.y);
+    this.tooltip.set({ text: node.label, x: pos.x, y: pos.y });
+  }
+
+  showPreviewTooltip(node: TreePreviewNode): void {
+    if (this.isPanning()) return;
+    const pos = this._svgToCanvas(node.x + node.width / 2, node.y);
+    this.tooltip.set({ text: node.choice.text, x: pos.x, y: pos.y });
+  }
+
+  hideTooltip(): void {
+    this.tooltip.set(null);
+  }
+
+  /** Convert SVG user-space coordinates to CSS pixels relative to the canvas element. */
+  private _svgToCanvas(svgX: number, svgY: number): { x: number; y: number } {
+    const rect = this.treeCanvasRef.nativeElement.getBoundingClientRect();
+    const [vbX, vbY, vbW, vbH] = this.viewBoxString().split(' ').map(Number);
+    return {
+      x: (svgX - vbX) * (rect.width / vbW),
+      y: (svgY - vbY) * (rect.height / vbH),
+    };
+  }
+
   onSvgMouseDown(e: MouseEvent): void {
     // Only left-click, and not on an interactive node
     if (e.button !== 0) return;
     if ((e.target as Element).closest('.tree-node')) return;
 
+    this.hideTooltip();
     e.preventDefault();
     this._lastX = e.clientX;
     this._lastY = e.clientY;

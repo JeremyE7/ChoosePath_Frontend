@@ -111,6 +111,39 @@
   color: var(--ink3);
 }
 
+/* Node tooltip */
+@keyframes tooltipIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 4px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+}
+
+.node-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--s0);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-family: var(--f-ui), sans-serif;
+  color: var(--ink);
+  line-height: 1.45;
+  max-width: 200px;
+  box-shadow: var(--sh-md);
+  pointer-events: none;
+  z-index: 10;
+  animation: tooltipIn 0.15s var(--ease-out) both;
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* Preview nodes (choice options on tree) */
 .preview-node {
   cursor: pointer;

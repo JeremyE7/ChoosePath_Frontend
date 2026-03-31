@@ -176,6 +176,7 @@
           class="tree-node preview-node"
           [class.selected]="node.isSelected"
           [class.disabled]="node.isDisabled"
+          [class.ghost]="node.isGhost"
           [class.loading]="loadingNodeId() === node.id"
         >
           <!-- Outer ring - always rendered but opacity transitions -->
@@ -203,16 +204,21 @@
 
           <text
             [attr.x]="node.x + node.width / 2"
-            [attr.y]="node.y + node.height / 2 + 1"
+            [attr.y]="node.displayLines.length > 1 ? node.y + node.height / 2 - 5 : node.y + node.height / 2 + 1"
             text-anchor="middle"
             dominant-baseline="central"
             [attr.fill]="node.textFill"
-            font-size="10"
+            font-size="9.5"
             [attr.font-weight]="node.isSelected ? '700' : '500'"
             font-family="Plus Jakarta Sans, sans-serif"
             letter-spacing="0.01em"
           >
-            {{ node.displayLabel }}
+            @for (line of node.displayLines; track $index) {
+              <tspan
+                [attr.x]="node.x + node.width / 2"
+                [attr.dy]="$index === 0 ? '0' : '12'"
+              >{{ line }}</tspan>
+            }
           </text>
         </g>
       }

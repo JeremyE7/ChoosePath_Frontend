@@ -48,7 +48,7 @@ export interface TreePreviewNode {
   choiceKey: string;
   choice: Choice;
   label: string;
-  displayLabel: string;
+  displayLines: string[];
   depth: number;
   x: number;
   y: number;
@@ -61,6 +61,10 @@ export interface TreePreviewNode {
   textFill: string;
   isSelected: boolean;
   isDisabled: boolean;
+  /** Ghost node = unchosen choice that persists in the tree */
+  isGhost: boolean;
+  /** Parent node ID - used by ghost nodes to draw edges */
+  parentNodeId?: string;
 }
 
 @Component({

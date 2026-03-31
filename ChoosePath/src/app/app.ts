@@ -92,6 +92,9 @@ export class App implements OnInit {
   // Loading state for preview node selection
   readonly loadingNodeId = signal<string | null>(null);
 
+  // Ghost nodes: unchosen choices that persist in the tree as disabled
+  readonly ghostNodes = signal<TreePreviewNode[]>([]);
+
   // Hint - solo visible cuando no hay nodos o es el primer nodo
   readonly hintVisible = computed(() => {
     return this.nodeCount() <= 1 && this.gamePhase() === 'playing';
@@ -186,7 +189,7 @@ export class App implements OnInit {
       return {
         id: node.id,
         label: node.label,
-        displayLabel: node.label.length > 14 ? node.label.slice(0, 13) + '...' : node.label,
+        displayLabel: node.label,
         depth,
         x: pos?.x || 0,
         y: pos?.y || 0,
@@ -258,25 +261,35 @@ export class App implements OnInit {
     return edges;
   });
 
+  /** Split text into lines that fit within preview node width */
+  private _splitDisplayText(text: string, maxChars = 20): string[] {
+    if (text.length <= maxChars) return [text];
+    const mid = text.lastIndexOf(' ', maxChars);
+    const splitAt = mid > maxChars * 0.4 ? mid : maxChars;
+    const line1 = text.slice(0, splitAt).trim();
+    const line2 = text.slice(splitAt).trim();
+    return [line1, line2.length > maxChars ? line2.slice(0, maxChars - 1) + '…' : line2];
+  }
+
   readonly previewNodes = computed<TreePreviewNode[]>(() => {
     const node = this.currentNode();
     const choices = node?.choices || [];
-    
+    const ghosts = this.ghostNodes();
+
     // Don't show preview if no choices OR player is dead
-    // Note: We show preview even if node has children (they're the uncreated choices)
-    if (choices.length === 0 || this.isPlayerDead()) return [];
+    if (choices.length === 0 || this.isPlayerDead()) return [...ghosts];
 
     const currentPos = this.storyService.nodePositions()[this.storyService.currentNodeId()];
-    if (!currentPos) return [];
+    if (!currentPos) return [...ghosts];
 
-    // Use same tree config as real nodes
-    const NW = 122;
-    const NH = 33;
+    // Wider preview nodes to fit full text
+    const NW = 142;
+    const NH = 38;
     const H_GAP = 42;
     const V_GAP = 70;
     const currentDepth = this.maxDepth();
     const nextDepth = currentDepth + 1;
-    
+
     const COLORS = [
       { fill: 'rgba(74,124,247,.12)', stroke: '#4a7cf7', txt: '#2556e0' },
       { fill: 'rgba(14,184,160,.1)', stroke: '#0eb8a0', txt: '#087060' },
@@ -285,24 +298,22 @@ export class App implements OnInit {
       { fill: 'rgba(240,86,122,.1)', stroke: '#f0567a', txt: '#b03050' },
       { fill: 'rgba(16,185,129,.1)', stroke: '#10b981', txt: '#077050' },
     ];
-    
+
     const color = COLORS[nextDepth % COLORS.length];
-    
-    // Center X - position relative to parent center
-    const parentCenterX = currentPos.x + NW / 2;
+
+    // Center X - position relative to parent center (use real tree NW for parent)
+    const parentCenterX = currentPos.x + 122 / 2;
 
     // Calculate total width for children and center them under parent
     const totalWidth = choices.length * NW + (choices.length - 1) * H_GAP;
     const startX = parentCenterX - totalWidth / 2;
 
     const loadingId = this.loadingNodeId();
-    
-    return choices.map((choice, i) => {
-      // Same positioning logic as real tree nodes
+
+    const active = choices.map((choice, i) => {
       const x = startX + i * (NW + H_GAP);
-      // Position below parent node - all at same Y level
-      const y = currentPos.y + NH + 50;
-      
+      const y = currentPos.y + 33 + 50;
+
       const isLoading = loadingId !== null;
       const isThisLoading = loadingId === `preview-${choice.key}`;
 
@@ -311,7 +322,7 @@ export class App implements OnInit {
         choiceKey: choice.key,
         choice,
         label: choice.text,
-        displayLabel: choice.text.length > 14 ? choice.text.slice(0, 13) + '...' : choice.text,
+        displayLines: this._splitDisplayText(choice.text),
         depth: nextDepth,
         x,
         y,
@@ -324,8 +335,11 @@ export class App implements OnInit {
         textFill: isThisLoading ? color.txt : (isLoading ? 'rgba(0,0,0,0.3)' : color.txt),
         isSelected: isThisLoading,
         isDisabled: isLoading && !isThisLoading,
+        isGhost: false,
       };
     });
+
+    return [...ghosts, ...active];
   });
 
   // Preview edges - connections from parent to preview nodes
@@ -333,35 +347,35 @@ export class App implements OnInit {
     const previews = this.previewNodes();
     if (previews.length === 0) return [];
 
-    const currentPos = this.storyService.nodePositions()[this.storyService.currentNodeId()];
-    if (!currentPos) return [];
+    const positions = this.storyService.nodePositions();
+    const NW_TREE = 122;
+    const NH_TREE = 33;
 
-    const NW = 122;
-    const NH = 33;
-    
-    // Start from bottom center of current node (parent)
-    const fromX = currentPos.x + NW / 2;
-    const fromY = currentPos.y + NH;
+    const edges = previews.map((preview) => {
+      const parentId = preview.isGhost
+        ? preview.parentNodeId
+        : this.storyService.currentNodeId();
+      const parentPos = parentId ? positions[parentId] : null;
+      if (!parentPos) return null;
 
-    const edges = previews.map((preview, i) => {
-      // End at top center of preview node
-      const endX = preview.x + NW / 2;
+      const fromX = parentPos.x + NW_TREE / 2;
+      const fromY = parentPos.y + NH_TREE;
+      const endX = preview.x + preview.width / 2;
       const endY = preview.y;
-      
-      // Curved bezier line - same style as real tree edges
+
       const midY = (fromY + endY) / 2;
       const path = `M${fromX},${fromY} C${fromX},${midY} ${endX},${midY} ${endX},${endY}`;
-      
+
       return {
-        id: `preview-edge-${preview.choiceKey}`,
+        id: `preview-edge-${preview.id}`,
         path,
-        stroke: '#4a7cf7', // Same blue as regular edges on path
-        strokeWidth: '1.8',
-        markerEnd: 'url(#ahb)',
-        isNew: false, // Don't use animation - just show normally
+        stroke: preview.isGhost ? 'rgba(120,140,200,.2)' : '#4a7cf7',
+        strokeWidth: preview.isGhost ? '1' : '1.8',
+        markerEnd: preview.isGhost ? 'url(#ahg)' : 'url(#ahb)',
+        isNew: false,
       };
     });
-    return edges;
+    return edges.filter((e): e is NonNullable<typeof e> => e !== null);
   });
 
   hasMemoryFn = (text: string): boolean => {
@@ -430,6 +444,7 @@ export class App implements OnInit {
     this.storyService.clearSavedGame();
     this.storyService.resetStory();
     this.memoryService.clearMemories();
+    this.ghostNodes.set([]);
     localStorage.setItem('choosepath_player_nickname', data.nickname);
 
     // Initialize narrator with story context
@@ -480,6 +495,7 @@ export class App implements OnInit {
     this.storyService.resetStory();
     this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
+    this.ghostNodes.set([]);
     localStorage.removeItem('choosepath_player_nickname');
   }
 
@@ -536,6 +552,25 @@ export class App implements OnInit {
     if (!choice.nextNodeId || this.loading()) return;
     console.log(choice);
 
+    // Save unchosen options as ghost nodes before committing
+    const currentPreviews = this.previewNodes().filter(p => !p.isGhost);
+    const unchosen = currentPreviews.filter(p => p.id !== `preview-${choice.key}`);
+    if (unchosen.length > 0) {
+      const parentNodeId = this.storyService.currentNodeId();
+      const newGhosts: TreePreviewNode[] = unchosen.map(p => ({
+        ...p,
+        isDisabled: true,
+        isSelected: false,
+        isGhost: true,
+        fill: 'rgba(180,190,220,.12)',
+        stroke: 'rgba(180,190,220,.3)',
+        strokeWidth: '0.8',
+        textFill: 'rgba(150,160,190,.55)',
+        parentNodeId,
+      }));
+      this.ghostNodes.update(prev => [...prev, ...newGhosts]);
+    }
+
     try {
       const newId = await this.storyService.commitChoice(choice, (error: string) => {
         this.showToast(error, 'error');
@@ -578,6 +613,7 @@ export class App implements OnInit {
     this.gamePhase.set('start');
     this.storyService.clearSavedGame();
     this.memoryService.clearMemories();
+    this.ghostNodes.set([]);
     this.scoreSaved.set(false);
     this.playerNickname.set('');
     localStorage.removeItem('choosepath_player_nickname');

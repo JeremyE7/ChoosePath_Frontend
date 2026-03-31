@@ -69,6 +69,13 @@
 .cc:active {
   cursor: grabbing;
 }
+.cc.cc-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
 .cck {
   font-family: var(--f-mono);
   font-size: 0.6rem;
